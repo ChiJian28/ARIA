@@ -6,15 +6,25 @@ import logger from '../utils/logger';
 
 let pool: Pool | null = null;
 
+function buildPoolConfig() {
+  const connectionString = config.DATABASE_URL;
+  const needsSsl =
+    connectionString.includes('supabase.com') ||
+    connectionString.includes('sslmode=require');
+
+  return {
+    connectionString,
+    min: config.DB_POOL_MIN,
+    max: config.DB_POOL_MAX,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+    ...(needsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+  };
+}
+
 export function getPool(): Pool {
   if (!pool) {
-    pool = new Pool({
-      connectionString: config.DATABASE_URL,
-      min: config.DB_POOL_MIN,
-      max: config.DB_POOL_MAX,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
-    });
+    pool = new Pool(buildPoolConfig());
 
     pool.on('error', (err) => {
       logger.error('Unexpected DB pool error', { error: err.message });

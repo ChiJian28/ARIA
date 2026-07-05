@@ -2,8 +2,18 @@ import { Queue, Worker } from 'bullmq';
 import { config } from '../config';
 import logger from '../utils/logger';
 
-// BullMQ bundles its own ioredis — pass connection options object, not a Redis instance
-const connectionOptions = { url: config.REDIS_URL };
+/** BullMQ connection — Upstash needs maxRetriesPerRequest: null */
+function buildRedisConnection() {
+  const isUpstash = config.REDIS_URL.includes('upstash.io');
+  return {
+    url: config.REDIS_URL,
+    ...(isUpstash
+      ? { maxRetriesPerRequest: null, enableReadyCheck: false }
+      : {}),
+  };
+}
+
+const connectionOptions = buildRedisConnection();
 
 let rwaQueue: Queue | null = null;
 let sentinelQueue: Queue | null = null;

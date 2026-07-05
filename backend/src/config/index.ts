@@ -63,8 +63,8 @@ const configSchema = z.object({
   RATE_LIMIT_MAX: z.string().default('100').transform(Number),
   RWA_SUBMIT_RATE_LIMIT: z.string().default('5').transform(Number),
 
-  SENTINEL_CRON: z.string().default('*/5 * * * *'),
-  SETTLEMENT_CRON: z.string().default('0 0 * * *'),
+  SENTINEL_CRON: z.string().default('0 0 */5 * *'),
+  SETTLEMENT_CRON: z.string().default('0 0 */2 * *'),
   LIQUIDATION_THRESHOLD: z.string().default('0.75').transform(Number),
 
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://localhost:5173'),
