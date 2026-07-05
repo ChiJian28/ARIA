@@ -7,6 +7,7 @@ import type {
   ParsedInvoiceDocument,
   VaultStats,
   VaultPosition,
+  VaultYieldTrendPoint,
   VaultPrepareDepositResponse,
   VaultPrepareWithdrawResponse,
   VaultSubmitResponse,
@@ -101,6 +102,11 @@ export const fetchVaultInstruments = () => apiFetch<VaultInstrumentResponse[]>('
 export const fetchVaultRiskDistribution = () => apiFetch<VaultRiskDistributionResponse>('/vault/risk-distribution');
 export const fetchVaultPosition = (address: string) =>
   apiFetch<VaultPosition | null>(`/vault/positions/${address}`);
+export const fetchVaultYieldTrend = (address: string | null, days = 7) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (address) params.set('address', address);
+  return apiFetch<VaultYieldTrendPoint[]>(`/vault/yield-trend?${params.toString()}`);
+};
 
 export const prepareVaultDeposit = (address: string, amountMotes: string) =>
   apiFetch<VaultPrepareDepositResponse>('/vault/deposit', {

@@ -21,6 +21,7 @@ import {
   useVaultPosition,
   useVaultInstruments,
   useVaultRiskDistribution,
+  useVaultYieldTrend,
 } from '@/hooks/useVault';
 import { useWallet } from '@/hooks/useWallet';
 import { useTransaction } from '@/hooks/useTransaction';
@@ -36,6 +37,7 @@ export default function VaultPage() {
   const { data: position, isLoading: positionLoading } = useVaultPosition(address);
   const { data: instruments, isLoading: instrumentsLoading } = useVaultInstruments();
   const { data: riskDistribution, isLoading: riskDistLoading } = useVaultRiskDistribution();
+  const { data: yieldTrend, isLoading: yieldTrendLoading } = useVaultYieldTrend(address, 7);
 
   const { deposit, withdraw } = useTransaction();
 
@@ -49,16 +51,15 @@ export default function VaultPage() {
     return instruments ?? [];
   }, [instruments]);
 
-  // Calculate dynamic utilization rate based on active instruments
+  // Capital utilization — locked CSPR / total TVL (from on-chain collateral locks in DB)
   const utilizationRate = useMemo(() => {
-    if (!stats) return 82;
+    if (!stats) return 0;
+    if (typeof stats.utilizationPct === 'number') return stats.utilizationPct;
     const tvl = motesToCspr(stats.tvlMotes);
+    const locked = stats.lockedCsprMotes ? motesToCspr(stats.lockedCsprMotes) : 0;
     if (tvl <= 0) return 0;
-    const activeValue = activeInstruments
-      .filter((inv) => inv.claimsStatus === 'Active')
-      .reduce((sum, inv) => sum + inv.faceValue, 0);
-    return Math.min(98, Math.round((activeValue / tvl) * 100));
-  }, [stats, activeInstruments]);
+    return Math.min(100, Math.round((locked / tvl) * 100));
+  }, [stats]);
 
   // Handle deposit/withdrawal actions
   const handleAction = async (e: React.FormEvent) => {
@@ -103,17 +104,16 @@ export default function VaultPage() {
   const userCsprEquivalent = position ? motesToCspr(position.csprDeposited) : 0;
   const userYieldEarned = position ? motesToCspr(position.yieldEarned) : 0;
 
-  // Compounding Yield Accrual (7D Trend) SVG Area Chart
-  const displayYield = userYieldEarned;
-  const hasYield = displayYield > 0;
+  // Compounding Yield Accrual (7D Trend) — cumulative CSPR from settlement_events
   const chartData = useMemo(() => {
-    if (hasYield) {
-      return [0.05, 0.12, 0.18, 0.32, 0.48, 0.65, 0.84, 1.0].map((f) => displayYield * f);
+    if (yieldTrend?.length) {
+      return yieldTrend.map((p) => motesToCspr(p.cumulativeYieldMotes));
     }
-    return [5, 12, 18, 32, 48, 65, 84, 110, 148];
-  }, [displayYield, hasYield]);
+    return Array.from({ length: 7 }, () => 0);
+  }, [yieldTrend]);
 
-  const maxVal = hasYield ? displayYield : 150;
+  const hasYield = userYieldEarned > 0 || chartData.some((v) => v > 0);
+  const maxVal = Math.max(...chartData, hasYield ? 0.000001 : 1);
   const width = 500;
   const height = 110;
   const padding = 10;
@@ -142,7 +142,8 @@ export default function VaultPage() {
   // Stats values
   const tvlCspr = stats ? motesToCspr(stats.tvlMotes) : 128450;
   const apy = stats ? (stats.currentApy * 100).toFixed(1) : '9.0';
-  const activeCollateral = stats ? stats.activeCollateral : 4;
+  const poolYieldCspr = stats ? motesToCspr(stats.totalYieldEarned) : 0;
+  const activeCollateral = stats ? stats.activeCollateral : 0;
   const activePositions = stats ? stats.activePositions : 12;
 
   return (
@@ -166,7 +167,7 @@ export default function VaultPage() {
       </div>
 
       {/* ================= TOP: VAULT STATS GRID ================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="vault-stats-grid">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4" id="vault-stats-grid">
         {/* TVL */}
         <div className="p-5 rounded-2xl border border-violet-500/10 bg-bg-card/40 space-y-2">
           <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wider block">Total Value Locked (TVL)</span>
@@ -185,7 +186,7 @@ export default function VaultPage() {
         {/* Current APY */}
         <div className="p-5 rounded-2xl border border-violet-500/10 bg-bg-card/40 space-y-2 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-xl pointer-events-none" />
-          <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wider block">Net Yield (APY)</span>
+          <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wider block">Expected Net Yield (APY)</span>
           <div className="flex items-baseline space-x-1">
             <span className="font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-300">
               {statsLoading ? '...' : `${apy}%`}
@@ -193,7 +194,23 @@ export default function VaultPage() {
           </div>
           <p className="text-[11px] text-text-secondary font-light flex items-center space-x-1">
             <TrendingUp className="w-3.5 h-3.5 text-violet-400" />
-            <span>Compounding hourly</span>
+            <span>Forward-looking estimate</span>
+          </p>
+        </div>
+
+        {/* Pool Yield Realized */}
+        <div className="p-5 rounded-2xl border border-violet-500/10 bg-bg-card/40 space-y-2 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500/10 rounded-full blur-xl pointer-events-none" />
+          <span className="text-[10px] font-mono text-text-secondary uppercase tracking-wider block">Pool Yield Realized</span>
+          <div className="flex items-baseline space-x-1">
+            <span className="font-bold text-2xl text-teal-400">
+              {statsLoading ? '...' : poolYieldCspr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}
+            </span>
+            <span className="font-mono text-xs text-teal-400/80 font-bold">CSPR</span>
+          </div>
+          <p className="text-[11px] text-text-secondary font-light flex items-center space-x-1">
+            <Award className="w-3.5 h-3.5 text-teal-400" />
+            <span>Cumulative from settlements</span>
           </p>
         </div>
 
@@ -405,8 +422,13 @@ export default function VaultPage() {
                 Compounding Yield Accrual (7D Trend)
               </span>
               <div className="w-full h-28 bg-bg-deep/60 rounded-xl border border-violet-500/10 p-2 flex items-center justify-center relative">
+                {!hasYield && !yieldTrendLoading && (
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-text-secondary/70 uppercase tracking-wider pointer-events-none">
+                    No yield accrual yet
+                  </span>
+                )}
                 {points.length > 0 && (
-                  <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                  <svg viewBox={`0 0 ${width} ${height}`} className={`w-full h-full overflow-visible ${hasYield ? '' : 'opacity-40'}`}>
                     <defs>
                       <linearGradient id="violet-teal-grad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="rgba(139, 92, 246, 0.45)" />
@@ -440,23 +462,26 @@ export default function VaultPage() {
                     {/* Top Curve Line */}
                     <path d={pathD} fill="none" stroke="url(#line-grad)" strokeWidth="1.5" />
 
-                    {/* Glowing end point */}
-                    <circle
-                      cx={points[points.length - 1].x}
-                      cy={points[points.length - 1].y}
-                      r="4"
-                      fill="#14b8a6"
-                      className="animate-ping"
-                      style={{
-                        transformOrigin: `${points[points.length - 1].x}px ${points[points.length - 1].y}px`,
-                      }}
-                    />
-                    <circle
-                      cx={points[points.length - 1].x}
-                      cy={points[points.length - 1].y}
-                      r="3.5"
-                      fill="#14b8a6"
-                    />
+                    {hasYield && (
+                      <>
+                        <circle
+                          cx={points[points.length - 1].x}
+                          cy={points[points.length - 1].y}
+                          r="4"
+                          fill="#14b8a6"
+                          className="animate-ping"
+                          style={{
+                            transformOrigin: `${points[points.length - 1].x}px ${points[points.length - 1].y}px`,
+                          }}
+                        />
+                        <circle
+                          cx={points[points.length - 1].x}
+                          cy={points[points.length - 1].y}
+                          r="3.5"
+                          fill="#14b8a6"
+                        />
+                      </>
+                    )}
                   </svg>
                 )}
               </div>
@@ -504,7 +529,7 @@ export default function VaultPage() {
           <table className="w-full border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-violet-500/10 bg-bg-deep/60 text-text-secondary font-mono text-[10px] uppercase">
-                <th className="py-3 px-4 font-semibold">CEP-78 Token Address</th>
+                <th className="py-3 px-4 font-semibold">Mint Transaction</th>
                 <th className="py-3 px-4 font-semibold">SME Borrower</th>
                 <th className="py-3 px-4 font-semibold">Face Value</th>
                 <th className="py-3 px-4 font-semibold">Asset Yield (APY)</th>
@@ -531,15 +556,12 @@ export default function VaultPage() {
                 activeInstruments.map((asset) => (
                   <tr
                     key={asset.id}
-                    onClick={() => router.push(`/rwa/${asset.id}`)}
+                    onClick={() => router.push(`/rwa/${asset.id}?from=vault`)}
                     className="hover:bg-bg-card-hover/40 transition-colors cursor-pointer group"
                   >
-                    <td className="py-3.5 px-4 font-mono text-text-secondary group-hover:text-teal-400 transition-colors">
-                      {asset.nftTokenId ? (
-                        <span className="flex items-center space-x-1">
-                          <span className="text-teal-400 font-bold">CEP-78:</span>
-                          <span>{asset.nftTokenId}</span>
-                        </span>
+                    <td className="py-3.5 px-4 font-mono text-xs text-text-secondary group-hover:text-teal-400 transition-colors max-w-[220px]">
+                      {asset.mintTxHash ? (
+                        <span className="text-teal-400 break-all">{asset.mintTxHash}</span>
                       ) : (
                         <span className="text-text-muted">PENDING_MINT</span>
                       )}

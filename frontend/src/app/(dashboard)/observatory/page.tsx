@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useMemo, useState, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { pageTransition } from '@/lib/animations';
 import { ActiveCouncilPanel } from '@/components/observatory/ActiveCouncilPanel';
@@ -9,9 +9,11 @@ import { MeritocracyPanel } from '@/components/observatory/MeritocracyPanel';
 import { AuditTrailTable } from '@/components/observatory/AuditTrailTable';
 import { RwaDetailModal } from '@/components/rwa/RwaDetailModal';
 import { useObservatoryAuditTrail } from '@/hooks/useObservatory';
+import { clearObservatoryFocus } from '@/lib/observatory-focus';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function ObservatoryContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const focusRwaId = searchParams.get('rwaId');
   const [modalRwaId, setModalRwaId] = useState<string | null>(null);
@@ -21,6 +23,11 @@ function ObservatoryContent() {
     () => new Map((auditTrail ?? []).map((e) => [e.id, e.apy])),
     [auditTrail],
   );
+
+  const handleClearCouncilFocus = useCallback(() => {
+    clearObservatoryFocus();
+    router.replace('/observatory');
+  }, [router]);
 
   return (
     <motion.div
@@ -48,6 +55,7 @@ function ObservatoryContent() {
             focusRwaId={focusRwaId}
             apyByRwaId={apyByRwaId}
             onViewDetail={setModalRwaId}
+            onClearFocus={focusRwaId ? handleClearCouncilFocus : undefined}
           />
         </div>
         <div className="lg:col-span-2" id="leaderboard-panel">

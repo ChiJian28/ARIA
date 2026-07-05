@@ -76,6 +76,7 @@ export function useTransaction() {
   const invalidateVault = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['vault-position'] });
     queryClient.invalidateQueries({ queryKey: ['vault-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['vault-yield-trend'] });
   }, [queryClient]);
 
   const deposit = useCallback(

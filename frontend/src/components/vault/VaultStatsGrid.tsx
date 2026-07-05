@@ -15,7 +15,9 @@ export function VaultStatsGrid() {
 
   const tvl = data ? motesToCspr(data.tvlMotes).toFixed(0) : '—';
   const apy = data ? `${(data.currentApy * 100).toFixed(1)}%` : '—';
-  const util = data?.activePositions ? `${Math.min(100, Math.round((data.activeCollateral / Math.max(data.activePositions, 1)) * 100))}%` : '—';
+  const util = data
+    ? `${data.utilizationPct ?? 0}%`
+    : '—';
   const active = data?.activeCollateral ?? '—';
 
   return (

@@ -78,6 +78,9 @@ export interface VaultStats {
   totalLpTokens: string;
   activePositions: number;
   activeCollateral: number;
+  lockedCsprMotes: string;
+  lockedCspr: string;
+  utilizationPct: number;
   currentApy: number;
   totalYieldEarned: string;
 }
@@ -88,6 +91,12 @@ export interface VaultPosition {
   csprDeposited: string;
   yieldEarned: string;
   lastUpdated: string;
+}
+
+export interface VaultYieldTrendPoint {
+  date: string;
+  dailyYieldMotes: string;
+  cumulativeYieldMotes: string;
 }
 
 export interface VaultPrepareDepositResponse {
@@ -127,6 +136,7 @@ export interface VaultInstrumentResponse {
   currency: string;
   maturityDate: string;
   nftTokenId: string | null;
+  mintTxHash: string | null;
   assetApy: number;
   riskLevel: 'Low' | 'Medium' | 'High';
   claimsStatus: string;

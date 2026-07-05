@@ -2,12 +2,13 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, RotateCcw } from 'lucide-react';
 import { RwaCouncilTheater } from '@/components/rwa/RwaCouncilTheater';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchCouncilPending } from '@/lib/api';
 import { formatUSD } from '@/lib/formatters';
-import { readObservatoryPreview } from '@/lib/observatory-focus';
+import { useObservatoryPreview } from '@/lib/observatory-focus';
+import { useHydrated } from '@/hooks/useHydrated';
 import { COUNCIL_MIN_APPROVE, COUNCIL_VOTING_COUNT } from '@/lib/constants';
 import type { RwaSummary } from '@/types/api.types';
 
@@ -15,6 +16,8 @@ interface ActiveCouncilPanelProps {
   focusRwaId?: string | null;
   apyByRwaId?: Map<string, number | null>;
   onViewDetail?: (rwaId: string) => void;
+  /** Clear URL/session focus and return to default council view */
+  onClearFocus?: () => void;
 }
 
 function findInCouncil(
@@ -34,7 +37,9 @@ export function ActiveCouncilPanel({
   focusRwaId,
   apyByRwaId,
   onViewDetail,
+  onClearFocus,
 }: ActiveCouncilPanelProps) {
+  const hydrated = useHydrated();
   const { data: council, isLoading } = useQuery({
     queryKey: ['council-pending'],
     queryFn: fetchCouncilPending,
@@ -44,20 +49,32 @@ export function ActiveCouncilPanel({
   const activeRwa = findInCouncil(focusRwaId, council);
   const theaterRwaId = activeRwa?.id ?? focusRwaId ?? null;
   const showTheater = Boolean(theaterRwaId);
-  const preview = theaterRwaId ? readObservatoryPreview(theaterRwaId) : undefined;
+  const preview = useObservatoryPreview(theaterRwaId);
 
-  const issuerName = (activeRwa as { issuerName?: string } | undefined)?.issuerName
-    ?? preview?.counterpartyName;
-  const buyerName = (activeRwa as { buyerName?: string } | undefined)?.buyerName
-    ?? preview?.counterpartyName;
-  const faceValue = activeRwa?.faceValue ?? preview?.faceValue;
-  const currency = activeRwa?.currency ?? preview?.currency ?? 'USD';
+  const issuerName = hydrated
+    ? ((activeRwa as { issuerName?: string } | undefined)?.issuerName ?? preview?.counterpartyName)
+    : undefined;
+  const buyerName = hydrated
+    ? ((activeRwa as { buyerName?: string } | undefined)?.buyerName ?? preview?.counterpartyName)
+    : undefined;
+  const faceValue = hydrated
+    ? (activeRwa?.faceValue ?? (preview?.faceValue != null ? Number(preview.faceValue) : undefined))
+    : undefined;
+  const currency = hydrated
+    ? (activeRwa?.currency ?? preview?.currency ?? 'USD')
+    : 'USD';
   const apy = theaterRwaId ? apyByRwaId?.get(theaterRwaId) : undefined;
 
   const isFocusOnlyTerminal = useMemo(() => {
     if (!focusRwaId || activeRwa) return false;
     return Boolean(theaterRwaId);
   }, [focusRwaId, activeRwa, theaterRwaId]);
+
+  const showClearFocus = Boolean(onClearFocus && (focusRwaId || isFocusOnlyTerminal));
+
+  const handleClearFocus = () => {
+    onClearFocus?.();
+  };
 
   if (isLoading && !theaterRwaId) {
     return <Skeleton className="min-h-[350px] rounded-2xl" />;
@@ -66,9 +83,22 @@ export function ActiveCouncilPanel({
   return (
     <div className="p-6 rounded-2xl border border-violet-500/[0.12] bg-bg-card/50 flex flex-col justify-between min-h-[350px]">
       <div>
-        <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider mb-4">
-          Active Council Processing
-        </h3>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h3 className="text-xs font-mono text-text-muted uppercase tracking-wider">
+            Active Council Processing
+          </h3>
+          {showClearFocus && (
+            <button
+              type="button"
+              onClick={handleClearFocus}
+              title="Clear focused RWA and return to default view"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wide text-text-muted hover:text-violet-300 hover:bg-violet-500/10 border border-transparent hover:border-violet-500/25 transition-colors shrink-0"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </button>
+          )}
+        </div>
 
         {showTheater && theaterRwaId ? (
           <div className="space-y-4">

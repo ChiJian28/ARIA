@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchVaultStats, fetchVaultPosition, fetchVaultInstruments, fetchVaultRiskDistribution } from '@/lib/api';
+import { fetchVaultStats, fetchVaultPosition, fetchVaultInstruments, fetchVaultRiskDistribution, fetchVaultYieldTrend } from '@/lib/api';
 
 export function useVaultStats() {
   return useQuery({
@@ -32,6 +32,14 @@ export function useVaultPosition(address: string | null) {
     queryKey: ['vault-position', address],
     queryFn: () => fetchVaultPosition(address!),
     enabled: !!address,
+    refetchInterval: 30000,
+  });
+}
+
+export function useVaultYieldTrend(address: string | null, days = 7) {
+  return useQuery({
+    queryKey: ['vault-yield-trend', address, days],
+    queryFn: () => fetchVaultYieldTrend(address, days),
     refetchInterval: 30000,
   });
 }

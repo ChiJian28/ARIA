@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Suspense } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import { LiveDot } from './LiveDot';
 import { ConnectButton } from '@/components/wallet/ConnectButton';
@@ -16,18 +17,26 @@ const LABELS: Record<string, string> = {
   rwa: 'RWA Detail',
 };
 
+const RWA_PARENT_FROM: Record<string, { label: string; href: string }> = {
+  vault: { label: 'Vault', href: '/vault' },
+  portfolio: { label: 'Portfolio', href: '/portfolio' },
+  observatory: { label: 'Observatory', href: '/observatory' },
+  submit: { label: 'Submit RWA', href: '/submit' },
+};
+
 type BreadcrumbItem = {
   label: string;
   href?: string;
 };
 
-function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
+function buildBreadcrumbs(pathname: string, from?: string | null): BreadcrumbItem[] {
   const segments = pathname.split('/').filter(Boolean);
 
   if (segments[0] === 'rwa' && segments.length >= 2) {
     const rwaId = segments[1];
+    const parent = (from ? RWA_PARENT_FROM[from] : undefined) ?? RWA_PARENT_FROM.observatory;
     return [
-      { label: 'Observatory', href: '/observatory' },
+      { label: parent.label, href: parent.href },
       { label: 'RWA Detail' },
       { label: rwaId.length > 12 ? `${rwaId.slice(0, 8)}…` : rwaId },
     ];
@@ -43,47 +52,61 @@ function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
   });
 }
 
-export function TopBar() {
+function TopBarBreadcrumbs() {
   const pathname = usePathname();
-  const crumbs = buildBreadcrumbs(pathname);
+  const searchParams = useSearchParams();
+  const crumbs = buildBreadcrumbs(pathname, searchParams.get('from'));
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-violet-500/[0.12] bg-bg-surface/80 backdrop-blur-sm sticky top-0 z-20">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm min-w-0">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-text-muted shrink-0 hover:text-text-primary transition-colors"
-        >
-          <AriaLogo size={18} />
-          <span>ARIA</span>
-        </Link>
-        {crumbs.map((crumb, i) => (
-          <div key={`${crumb.label}-${i}`} className="flex items-center gap-1.5 min-w-0">
-            <ChevronRight className="w-3 h-3 text-text-muted shrink-0" />
-            {crumb.href ? (
-              <Link
-                href={crumb.href}
-                className="text-text-secondary hover:text-text-primary transition-colors truncate"
-              >
-                {crumb.label}
-              </Link>
-            ) : (
-              <span
-                className={
-                  i === crumbs.length - 1
-                    ? 'text-text-primary font-medium truncate'
-                    : 'text-text-secondary truncate'
-                }
-              >
-                {crumb.label}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
+    <div className="flex items-center gap-1.5 text-sm min-w-0">
+      <Link
+        href="/"
+        className="flex items-center gap-1.5 text-text-muted shrink-0 hover:text-text-primary transition-colors"
+      >
+        <AriaLogo size={18} />
+        <span>ARIA</span>
+      </Link>
+      {crumbs.map((crumb, i) => (
+        <div key={`${crumb.label}-${i}`} className="flex items-center gap-1.5 min-w-0">
+          <ChevronRight className="w-3 h-3 text-text-muted shrink-0" />
+          {crumb.href ? (
+            <Link
+              href={crumb.href}
+              className="text-text-secondary hover:text-text-primary transition-colors truncate"
+            >
+              {crumb.label}
+            </Link>
+          ) : (
+            <span
+              className={
+                i === crumbs.length - 1
+                  ? 'text-text-primary font-medium truncate'
+                  : 'text-text-secondary truncate'
+              }
+            >
+              {crumb.label}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
-      {/* Right */}
+export function TopBar() {
+  return (
+    <header className="h-14 flex items-center justify-between px-6 border-b border-violet-500/[0.12] bg-bg-surface/80 backdrop-blur-sm sticky top-0 z-20">
+      <Suspense
+        fallback={
+          <div className="flex items-center gap-1.5 text-sm text-text-muted min-w-0">
+            <AriaLogo size={18} />
+            <span>ARIA</span>
+          </div>
+        }
+      >
+        <TopBarBreadcrumbs />
+      </Suspense>
+
       <div className="flex items-center gap-3">
         <GlobalTxTracker />
         <LiveDot />
