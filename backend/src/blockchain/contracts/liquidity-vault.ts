@@ -1,14 +1,26 @@
-import { CLPublicKey, DeployUtil } from 'casper-js-sdk';
-import { buildDepositDeploy, buildWithdrawDeploy } from '../transactions/builder';
-import { submitDeploy, submitAndWait, submitMockDeploy } from '../transactions/submitter';
-import { publicKeyFromHex } from '../transactions/casper-keys';
+import {
+  buildDepositDeploy,
+  buildWithdrawDeploy,
+  buildLockCollateralDeploy,
+  buildReleaseCollateralDeploy,
+  buildReceiveYieldDeploy,
+} from '../transactions/builder';
+import { signDeploy } from '../transactions/signer';
+import { submitDeploy, submitAndWait, submitMockDeploy, assertDeploySuccess } from '../transactions/submitter';
+import { publicKeyFromHex, publicKeyFromKeyFile } from '../transactions/casper-keys';
 import { getCasperConfig } from '../../config/casper';
+import { config } from '../../config';
 import logger from '../../utils/logger';
 import { DeployResult } from '../../utils/types/blockchain.types';
+import { DeployUtil, CLPublicKey } from 'casper-js-sdk';
 
 function isVaultConfigured(): boolean {
   const cfg = getCasperConfig().contracts.liquidityVault;
   return Boolean(cfg.contractHash && cfg.packageHash);
+}
+
+function getVaultOwnerKeyPath(signerKeyPath?: string): string {
+  return config.DEPLOYER_SECRET_KEY_PATH || signerKeyPath || './keys/deployer/secret_key.pem';
 }
 
 function callerFromHex(publicKeyHex: string): CLPublicKey {
@@ -105,10 +117,9 @@ export async function depositToVault(
   }
 
   try {
-    const { signDeploy } = await import('../transactions/signer');
     const deploy = buildDepositDeploy(amountMotes, callerFromHex(depositorPublicKeyHex));
     const signedDeploy = signDeploy(deploy, signerKeyPath);
-    return await submitAndWait(signedDeploy);
+    return assertDeploySuccess(await submitAndWait(signedDeploy), 'deposit');
   } catch (err) {
     logger.error('Failed to deposit to vault', { error: (err as Error).message });
     throw err;
@@ -126,10 +137,9 @@ export async function withdrawFromVault(
   }
 
   try {
-    const { signDeploy } = await import('../transactions/signer');
     const deploy = buildWithdrawDeploy(lpTokenAmount, callerFromHex(withdrawerPublicKeyHex));
     const signedDeploy = signDeploy(deploy, signerKeyPath);
-    return await submitAndWait(signedDeploy);
+    return assertDeploySuccess(await submitAndWait(signedDeploy), 'withdraw');
   } catch (err) {
     logger.error('Failed to withdraw from vault', { error: (err as Error).message });
     throw err;
@@ -139,8 +149,93 @@ export async function withdrawFromVault(
 export async function lockCollateral(
   rwaId: string,
   amountMotes: string,
-  signerKeyPath: string,
+  signerKeyPath?: string,
 ): Promise<DeployResult> {
-  logger.info('lockCollateral called (mock)', { rwa_id: rwaId, amountMotes });
-  return submitMockDeploy(`lock-collateral-${rwaId}`);
+  if (!isVaultConfigured()) {
+    logger.warn('LiquidityVault not deployed, using mock lock_collateral', { rwa_id: rwaId, amountMotes });
+    return submitMockDeploy(`lock-collateral-${rwaId}`);
+  }
+
+  const ownerKeyPath = getVaultOwnerKeyPath(signerKeyPath);
+
+  try {
+    const callerKey = publicKeyFromKeyFile(ownerKeyPath);
+    const deploy = buildLockCollateralDeploy(rwaId, amountMotes, callerKey);
+    const signedDeploy = signDeploy(deploy, ownerKeyPath);
+    const result = assertDeploySuccess(
+      await submitAndWait(signedDeploy),
+      'lock_collateral',
+    );
+    logger.info('Collateral locked on-chain', {
+      rwa_id: rwaId,
+      amountMotes,
+      deployHash: result.deployHash,
+    });
+    return result;
+  } catch (err) {
+    logger.error('Failed to lock collateral', { rwa_id: rwaId, error: (err as Error).message });
+    throw err;
+  }
+}
+
+export async function releaseCollateral(
+  rwaId: string,
+  signerKeyPath?: string,
+): Promise<DeployResult> {
+  if (!isVaultConfigured()) {
+    logger.warn('LiquidityVault not deployed, using mock release_collateral', { rwa_id: rwaId });
+    return submitMockDeploy(`release-collateral-${rwaId}`);
+  }
+
+  const ownerKeyPath = getVaultOwnerKeyPath(signerKeyPath);
+
+  try {
+    const callerKey = publicKeyFromKeyFile(ownerKeyPath);
+    const deploy = buildReleaseCollateralDeploy(rwaId, callerKey);
+    const signedDeploy = signDeploy(deploy, ownerKeyPath);
+    const result = assertDeploySuccess(
+      await submitAndWait(signedDeploy),
+      'release_collateral',
+    );
+    logger.info('Collateral released on-chain', {
+      rwa_id: rwaId,
+      deployHash: result.deployHash,
+    });
+    return result;
+  } catch (err) {
+    logger.error('Failed to release collateral', { rwa_id: rwaId, error: (err as Error).message });
+    throw err;
+  }
+}
+
+export async function receiveYield(
+  rwaId: string,
+  yieldMotes: string,
+  signerKeyPath?: string,
+): Promise<DeployResult> {
+  if (!isVaultConfigured()) {
+    logger.warn('LiquidityVault not deployed, using mock receive_yield', { rwa_id: rwaId });
+    return submitMockDeploy(`receive-yield-${rwaId}`);
+  }
+
+  const ownerKeyPath = getVaultOwnerKeyPath(signerKeyPath);
+
+  try {
+    const callerKey = publicKeyFromKeyFile(ownerKeyPath);
+    const deploy = buildReceiveYieldDeploy(rwaId, yieldMotes, callerKey);
+    const signedDeploy = signDeploy(deploy, ownerKeyPath);
+    const result = assertDeploySuccess(
+      await submitAndWait(signedDeploy),
+      'receive_yield',
+    );
+    logger.info('Yield received on-chain', {
+      rwa_id: rwaId,
+      yieldMotes,
+      deployHash: result.deployHash,
+    });
+    return result;
+  } catch (err) {
+    logger.error('Failed to receive yield', { rwa_id: rwaId, error: (err as Error).message });
+    throw err;
+  }
 }

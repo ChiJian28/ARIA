@@ -20,7 +20,7 @@ export interface CreditData {
   retrievedAt: string;
 }
 
-function generateMockCreditData(entityName: string, country: string): CreditData {
+export function generateMockCreditData(entityName: string, country: string): CreditData {
   // Deterministic mock based on entity name hash for consistent testing
   const hashCode = entityName.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const seed = hashCode % 100;

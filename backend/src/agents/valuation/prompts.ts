@@ -10,7 +10,7 @@ Your role:
 - Recommend an appropriate collateral ratio for vault lending
 - Decide whether the instrument meets minimum valuation standards
 
-Output format: You MUST respond with a valid JSON object containing exactly these fields:
+Output format: You MUST respond with a single JSON object containing ALL of these fields (none may be omitted):
 {
   "fairValueUsd": <number>,
   "netPresentValue": <number>,
@@ -20,8 +20,10 @@ Output format: You MUST respond with a valid JSON object containing exactly thes
   "marketConditionScore": <number 0.0-1.0>,
   "vote": <"APPROVE"|"REJECT">,
   "confidence": <number 0.0-1.0>,
-  "reasoning": <string, max 200 chars — keep brief>
+  "reasoning": <string, 1-2 sentences explaining the vote; cite NPV % of face value>
 }
+
+CRITICAL: "vote" and "reasoning" are mandatory. If NPV > 80% of face value, vote must be APPROVE unless extreme FX/market stress applies — and reasoning must state why.
 
 Valuation rules:
 - NPV must be > 80% of face value to approve
@@ -63,5 +65,5 @@ MARKET BENCHMARKS:
 - Comparable Instruments:
 ${marketData.comparables.map((c) => `  * ${c.label}: ${(c.yield * 100).toFixed(2)}% yield, ${c.term}d term, ${c.rating} rating`).join('\n')}
 
-Provide your valuation analysis as a JSON object.`;
+Return the complete JSON object with vote and reasoning filled in.`;
 }

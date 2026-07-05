@@ -52,6 +52,13 @@ export class VaultRepository {
     return row ? rowToPosition(row) : null;
   }
 
+  async listAllPositions() {
+    const rows = await query<VaultPositionRow>(
+      'SELECT * FROM vault_positions WHERE lp_tokens > 0 ORDER BY last_updated DESC',
+    );
+    return rows.map(rowToPosition);
+  }
+
   async getTVL(): Promise<{ totalCspr: string; totalPositions: number }> {
     const row = await queryOne<{ total_cspr: string; total_positions: string }>(
       'SELECT SUM(cspr_deposited)::TEXT as total_cspr, COUNT(*)::TEXT as total_positions FROM vault_positions',
@@ -98,6 +105,31 @@ export class VaultRepository {
       [rwaId],
     );
     return rows.map(rowToSettlementEvent);
+  }
+
+  async getYieldDistributionByDay(since: Date): Promise<{ day: string; amount: string }[]> {
+    return query<{ day: string; amount: string }>(
+      `SELECT TO_CHAR(settled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
+              SUM(amount::numeric)::TEXT AS amount
+       FROM settlement_events
+       WHERE event_type = 'YIELD_DISTRIBUTION'
+         AND settled_at >= $1
+       GROUP BY day
+       ORDER BY day ASC`,
+      [since],
+    );
+  }
+
+  async getMaturityEventDays(since: Date): Promise<string[]> {
+    const rows = await query<{ day: string }>(
+      `SELECT DISTINCT TO_CHAR(settled_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day
+       FROM settlement_events
+       WHERE event_type = 'MATURITY'
+         AND settled_at >= $1
+       ORDER BY day ASC`,
+      [since],
+    );
+    return rows.map((r) => r.day);
   }
 }
 

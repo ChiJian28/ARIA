@@ -140,6 +140,61 @@ export async function getDeployStatus(deployHash: string): Promise<'success' | '
   }
 }
 
+/** Fetch on-chain revert reason after a failed deploy (Casper 1.x + 2.x). */
+export async function getDeployFailureMessage(deployHash: string): Promise<string | undefined> {
+  try {
+    const response = await nodeClient.post<{
+      result?: {
+        execution_info?: {
+          execution_result?: Record<string, unknown>;
+        };
+        execution_results?: { result?: Record<string, unknown> }[];
+      };
+    }>('/rpc', {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'info_get_deploy',
+      params: { deploy_hash: deployHash, finalized_approvals: false },
+    });
+
+    const info = response.data?.result;
+    if (!info) return undefined;
+
+    const executionInfo = info.execution_info as {
+      execution_result?: Record<string, unknown>;
+    } | undefined;
+
+    if (executionInfo?.execution_result) {
+      const er = executionInfo.execution_result;
+      if ('Version2' in er) {
+        const v2 = er.Version2 as { error_message?: string | null };
+        return v2.error_message ?? undefined;
+      }
+      if ('Failure' in er) {
+        const body = er.Failure as { error_message?: string };
+        return body?.error_message;
+      }
+    }
+
+    const results = info.execution_results;
+    if (results?.length) {
+      const res = results[0].result ?? {};
+      if ('Failure' in res) {
+        const body = res.Failure as { error_message?: string };
+        return body?.error_message;
+      }
+    }
+
+    return undefined;
+  } catch (err) {
+    logger.warn('[getDeployFailureMessage] Request error', {
+      deployHash,
+      error: (err as Error).message,
+    });
+    return undefined;
+  }
+}
+
 export async function checkNodeConnectivity(): Promise<boolean> {
   try {
     const response = await nodeClient.get('/status');

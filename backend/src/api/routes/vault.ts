@@ -18,6 +18,8 @@ import {
 import { getDeployStatus } from '../../services/cspr-cloud/node-api';
 import { sseEmitter } from '../sse/emitter';
 import { getVaultInstruments, getVaultRiskDistribution } from '../../services/vault/instruments';
+import { computeWeightedPoolApy, DEFAULT_POOL_APY } from '../../services/vault/pool-apy';
+import { getUserYieldTrend } from '../../services/vault/yield-trend';
 import logger from '../../utils/logger';
 
 export const vaultRouter = Router();
@@ -33,14 +35,20 @@ async function getVaultRatio(): Promise<{ totalCspr: bigint; totalLp: bigint }> 
 // GET /vault/stats
 vaultRouter.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [tvl, totalYield, activeRwas] = await Promise.all([
+    const [tvl, totalYield, lockedMotes, collateralClaims, instruments] = await Promise.all([
       vaultRepo.getTVL(),
       vaultRepo.getYieldAccrued(),
-      rwaRepo.listActive(),
+      rwaRepo.getTotalLockedCollateralMotes(),
+      rwaRepo.countCollateralClaims(),
+      getVaultInstruments(DEFAULT_POOL_APY),
     ]);
 
     const tvlCspr = Number(tvl.totalCspr) / 1_000_000_000;
-    const estimatedApy = 0.09;
+    const lockedCspr = Number(lockedMotes) / 1_000_000_000;
+    const poolApy = computeWeightedPoolApy(instruments);
+    const utilizationPct = tvlCspr > 0
+      ? Math.min(100, Math.round((lockedCspr / tvlCspr) * 100))
+      : 0;
 
     res.json({
       success: true,
@@ -49,8 +57,11 @@ vaultRouter.get('/stats', async (req: Request, res: Response, next: NextFunction
         tvlCspr: tvlCspr.toFixed(2),
         totalLpTokens: tvl.totalCspr,
         activePositions: tvl.totalPositions,
-        activeCollateral: activeRwas.length,
-        currentApy: estimatedApy,
+        activeCollateral: collateralClaims,
+        lockedCsprMotes: lockedMotes,
+        lockedCspr: lockedCspr.toFixed(2),
+        utilizationPct,
+        currentApy: poolApy,
         totalYieldEarned: totalYield,
       },
     });
@@ -62,8 +73,9 @@ vaultRouter.get('/stats', async (req: Request, res: Response, next: NextFunction
 // GET /vault/instruments — funded collateral with per-asset APY and risk level
 vaultRouter.get('/instruments', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const instruments = await getVaultInstruments(0.09);
-    res.json({ success: true, data: instruments, count: instruments.length });
+    const instruments = await getVaultInstruments(DEFAULT_POOL_APY);
+    const poolApy = computeWeightedPoolApy(instruments);
+    res.json({ success: true, data: instruments, count: instruments.length, poolApy });
   } catch (err) {
     next(err);
   }
@@ -72,8 +84,22 @@ vaultRouter.get('/instruments', async (req: Request, res: Response, next: NextFu
 // GET /vault/risk-distribution — portfolio risk tier breakdown (Low / Medium / High %)
 vaultRouter.get('/risk-distribution', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const distribution = await getVaultRiskDistribution(0.09);
+    const instruments = await getVaultInstruments(DEFAULT_POOL_APY);
+    const poolApy = computeWeightedPoolApy(instruments);
+    const distribution = await getVaultRiskDistribution(poolApy);
     res.json({ success: true, data: distribution });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /vault/yield-trend?address=...&days=7 — LP cumulative yield over recent days
+vaultRouter.get('/yield-trend', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const address = typeof req.query.address === 'string' ? req.query.address : undefined;
+    const days = Math.min(30, Math.max(1, parseInt(String(req.query.days ?? '7'), 10) || 7));
+    const trend = await getUserYieldTrend(address, days);
+    res.json({ success: true, data: trend, days });
   } catch (err) {
     next(err);
   }

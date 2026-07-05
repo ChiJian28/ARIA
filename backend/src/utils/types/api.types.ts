@@ -83,6 +83,9 @@ export interface VaultStatsResponse {
   activePositions: number;
   currentApy: number;
   activeCollateral: number;
+  lockedCsprMotes: string;
+  lockedCspr: string;
+  utilizationPct: number;
 }
 
 export interface VaultInstrumentResponse {

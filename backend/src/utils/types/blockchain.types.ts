@@ -17,6 +17,8 @@ export interface DeployResult {
   status: 'pending' | 'success' | 'failure';
   errorMessage?: string;
   cost?: string;
+  /** CEP-78 token id when resolved from a mint_rwa deploy */
+  nftTokenId?: string;
 }
 
 export interface ContractCallParams {

@@ -1,5 +1,6 @@
-import { CasperClient, CasperServiceByJsonRPC } from 'casper-js-sdk';
+import { CasperClient, CasperServiceByJsonRPC, PurseIdentifier } from 'casper-js-sdk';
 import { getCasperConfig } from '../config/casper';
+import { publicKeyFromHex } from './transactions/casper-keys';
 import logger from '../utils/logger';
 
 let casperClient: CasperClient | null = null;
@@ -47,13 +48,17 @@ export async function getLatestBlockInfo(): Promise<{
 export async function getAccountBalance(publicKeyHex: string): Promise<string> {
   try {
     const rpc = getRpcService();
-    const stateRootHash = await rpc.getStateRootHash();
-    // getAccountBalanceUrefByPublicKey takes a CLPublicKey
-    // For balance queries, use the REST API instead
-    // TODO: Implement proper balance query with CLPublicKey
-    logger.debug('Balance query for', { publicKeyHex: publicKeyHex.substring(0, 16) });
-    return '0';
-  } catch {
+    const publicKey = publicKeyFromHex(publicKeyHex);
+    const balance = await rpc.queryBalance(
+      PurseIdentifier.MainPurseUnderPublicKey,
+      publicKey.toHex(),
+    );
+    return balance.toString();
+  } catch (err) {
+    logger.debug('Balance query failed', {
+      publicKeyHex: publicKeyHex.substring(0, 16),
+      error: (err as Error).message,
+    });
     return '0';
   }
 }

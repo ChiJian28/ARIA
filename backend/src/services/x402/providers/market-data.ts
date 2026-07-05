@@ -19,7 +19,7 @@ export interface MarketData {
   retrievedAt: string;
 }
 
-function generateMockMarketData(assetClass: string, currency: string): MarketData {
+export function generateMockMarketData(assetClass: string, currency: string): MarketData {
   const baseYields: Record<string, number> = {
     INVOICE: 0.085,
     PURCHASE_ORDER: 0.09,

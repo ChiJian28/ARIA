@@ -1,6 +1,6 @@
 import { DeployUtil } from 'casper-js-sdk';
 import { getCasperClient, getRpcService } from '../client';
-import { getDeployStatus } from '../../services/cspr-cloud/node-api';
+import { getDeployStatus, getDeployFailureMessage } from '../../services/cspr-cloud/node-api';
 import logger from '../../utils/logger';
 import { DeployResult } from '../../utils/types/blockchain.types';
 
@@ -36,8 +36,13 @@ export async function submitAndWait(deploy: DeployUtil.Deploy): Promise<DeployRe
     }
 
     if (status === 'failure') {
-      logger.error('Deploy failed on-chain', { deployHash });
-      return { deployHash, status: 'failure', errorMessage: 'Deploy execution failed' };
+      const chainError = await getDeployFailureMessage(deployHash);
+      logger.error('Deploy failed on-chain', { deployHash, chainError });
+      return {
+        deployHash,
+        status: 'failure',
+        errorMessage: chainError ?? 'Deploy execution failed',
+      };
     }
 
     logger.debug('Deploy still pending', { deployHash, poll: i + 1 });
@@ -55,4 +60,13 @@ export async function submitMockDeploy(label: string): Promise<DeployResult> {
   logger.info(`[MOCK] Deploy submitted: ${label}`, { deployHash: mockHash });
   await new Promise((r) => setTimeout(r, 2000)); // simulate block time
   return { deployHash: mockHash, status: 'success' };
+}
+
+export function assertDeploySuccess(result: DeployResult, label: string): DeployResult {
+  if (result.status !== 'success') {
+    throw new Error(
+      `${label} deploy ${result.status}: ${result.errorMessage ?? 'unknown'} (${result.deployHash})`,
+    );
+  }
+  return result;
 }

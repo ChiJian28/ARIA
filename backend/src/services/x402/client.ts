@@ -45,16 +45,23 @@ export async function x402Get<T = unknown>(
     }
 
     // Parse 402 Payment Required response
-    const paymentRequired = err.response.data as { amount?: string; currency?: string };
+    const paymentRequired = err.response.data as {
+      amount?: string;
+      currency?: string;
+      payTo?: string;
+      recipient?: string;
+    };
     const paymentAmount = costMotes ?? paymentRequired.amount ?? '50000000';
+    const payTo = paymentRequired.payTo ?? paymentRequired.recipient;
 
     logger.debug('x402: received 402, constructing payment proof', {
       url: providerBaseUrl + path,
       amount: paymentAmount,
+      payTo: payTo?.substring(0, 16),
     });
 
     await ensureSufficientBalance(paymentAmount);
-    const proof = await constructPaymentProof(paymentAmount, providerBaseUrl);
+    const proof = await constructPaymentProof(paymentAmount, providerBaseUrl, payTo);
     const paymentHeader = encodePaymentHeader(proof);
 
     // Retry with payment header
@@ -89,11 +96,16 @@ export async function x402Post<T = unknown>(
       throw err;
     }
 
-    const paymentRequired = err.response.data as { amount?: string };
+    const paymentRequired = err.response.data as {
+      amount?: string;
+      payTo?: string;
+      recipient?: string;
+    };
     const paymentAmount = costMotes ?? paymentRequired.amount ?? '50000000';
+    const payTo = paymentRequired.payTo ?? paymentRequired.recipient;
 
     await ensureSufficientBalance(paymentAmount);
-    const proof = await constructPaymentProof(paymentAmount, providerBaseUrl);
+    const proof = await constructPaymentProof(paymentAmount, providerBaseUrl, payTo);
     const paymentHeader = encodePaymentHeader(proof);
 
     const retryResponse = await client.post<T>(path, body, {

@@ -1,11 +1,8 @@
 import { Worker, Job } from 'bullmq';
 import { rwaRepo } from '../../db/repositories/rwa.repo';
-import { vaultRepo } from '../../db/repositories/vault.repo';
-import { processRepayment } from '../../blockchain/contracts/settlement-engine';
 import { getAgentConfigs } from '../../config/agents';
-import { scoreAgentReputationsForRwa } from '../../services/agents/reputation';
+import { settleMaturedRwa } from '../../services/vault/settlement';
 import { createWorker } from '../queue';
-import { sseEmitter } from '../../api/sse/emitter';
 import logger from '../../utils/logger';
 
 export function startSettlementWorker(): Worker {
@@ -25,35 +22,7 @@ export function startSettlementWorker(): Worker {
           logger.info('Processing matured instrument', { rwa_id: submission.id });
 
           try {
-            const amountMotes = Math.floor(submission.faceValue * 1_000_000_000).toString();
-
-            const result = await processRepayment(
-              submission.id,
-              amountMotes,
-              orchestratorKeyPath,
-            );
-
-            await rwaRepo.updateStatus(submission.id, 'SETTLED');
-            await vaultRepo.recordSettlementEvent({
-              rwaId: submission.id,
-              eventType: 'MATURITY',
-              amount: amountMotes,
-              txHash: result.deployHash,
-            });
-
-            await scoreAgentReputationsForRwa(submission.id, 'success');
-
-            sseEmitter.emit('VAULT_EVENT', {
-              type: 'VAULT_EVENT',
-              rwaId: submission.id,
-              data: {
-                eventType: 'MATURITY',
-                amount: amountMotes,
-                txHash: result.deployHash,
-              },
-              timestamp: new Date().toISOString(),
-            });
-
+            await settleMaturedRwa(submission, orchestratorKeyPath);
             processed++;
           } catch (err) {
             logger.error('Settlement processing failed', {

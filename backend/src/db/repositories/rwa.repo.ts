@@ -59,6 +59,8 @@ export class RwaRepository {
   async updateStatus(id: string, status: RwaStatus, extra?: Partial<{
     nftTokenId: string;
     mintTxHash: string;
+    collateralLockedMotes: string;
+    lockTxHash: string;
     riskScore: number;
     valuationNpv: number;
     collateralRatio: number;
@@ -71,6 +73,8 @@ export class RwaRepository {
 
     if (extra?.nftTokenId) { sets.push(`nft_token_id = $${idx++}`); params.push(extra.nftTokenId); }
     if (extra?.mintTxHash) { sets.push(`mint_tx_hash = $${idx++}`); params.push(extra.mintTxHash); }
+    if (extra?.collateralLockedMotes) { sets.push(`collateral_locked_motes = $${idx++}`); params.push(extra.collateralLockedMotes); }
+    if (extra?.lockTxHash) { sets.push(`lock_tx_hash = $${idx++}`); params.push(extra.lockTxHash); }
     if (extra?.riskScore !== undefined) { sets.push(`risk_score = $${idx++}`); params.push(extra.riskScore); }
     if (extra?.valuationNpv !== undefined) { sets.push(`valuation_npv = $${idx++}`); params.push(extra.valuationNpv); }
     if (extra?.collateralRatio !== undefined) { sets.push(`collateral_ratio = $${idx++}`); params.push(extra.collateralRatio); }
@@ -82,6 +86,15 @@ export class RwaRepository {
       params,
     );
     return rows[0] ? rowToSubmission(rows[0]) : null;
+  }
+
+  async setNftTokenId(id: string, nftTokenId: string): Promise<void> {
+    await query(
+      `UPDATE rwa_submissions
+       SET nft_token_id = $2, updated_at = NOW()
+       WHERE id = $1 AND (nft_token_id IS NULL OR nft_token_id = '')`,
+      [id, nftTokenId],
+    );
   }
 
   async listByOwner(ownerPublicKey: string, limit = 20, offset = 0): Promise<RwaSubmission[]> {
@@ -104,6 +117,34 @@ export class RwaRepository {
       "SELECT * FROM rwa_submissions WHERE status = 'ACTIVE' ORDER BY due_date ASC",
     );
     return rows.map(rowToSubmission);
+  }
+
+  async getTotalLockedCollateralMotes(): Promise<string> {
+    const row = await queryOne<{ total: string }>(
+      `SELECT COALESCE(SUM(collateral_locked_motes::numeric), 0)::TEXT AS total
+       FROM rwa_submissions
+       WHERE collateral_locked_motes IS NOT NULL`,
+    );
+    return row?.total ?? '0';
+  }
+
+  async countCollateralClaims(): Promise<number> {
+    const row = await queryOne<{ count: string }>(
+      `SELECT COUNT(*)::TEXT AS count
+       FROM rwa_submissions
+       WHERE collateral_locked_motes IS NOT NULL
+         AND collateral_locked_motes::numeric > 0`,
+    );
+    return parseInt(row?.count ?? '0', 10);
+  }
+
+  async clearCollateralLock(id: string): Promise<void> {
+    await query(
+      `UPDATE rwa_submissions
+       SET collateral_locked_motes = NULL, lock_tx_hash = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [id],
+    );
   }
 
   async listVaultInstruments(): Promise<VaultInstrumentQueryRow[]> {

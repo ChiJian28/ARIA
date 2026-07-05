@@ -20,6 +20,8 @@ export interface RwaSubmissionRow {
   status: RwaStatus;
   nft_token_id: string | null;
   mint_tx_hash: string | null;
+  collateral_locked_motes: string | null;
+  lock_tx_hash: string | null;
   risk_score: string | null;
   valuation_npv: string | null;
   collateral_ratio: string | null;
@@ -58,6 +60,8 @@ export function rowToSubmission(row: RwaSubmissionRow) {
     status: row.status,
     nftTokenId,
     mintTxHash,
+    collateralLockedMotes: row.collateral_locked_motes ?? undefined,
+    lockTxHash: row.lock_tx_hash ?? undefined,
     riskScore: row.risk_score ? parseFloat(row.risk_score) : undefined,
     valuationNpv: row.valuation_npv ? parseFloat(row.valuation_npv) : undefined,
     collateralRatio: row.collateral_ratio ? parseFloat(row.collateral_ratio) : undefined,

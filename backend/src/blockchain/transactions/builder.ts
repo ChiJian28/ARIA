@@ -254,6 +254,147 @@ export function buildWithdrawDeploy(
   );
 }
 
+/** Owner-only: lock vault CSPR against an approved RWA. */
+export function buildLockCollateralDeploy(
+  rwaId: string,
+  amountMotes: string,
+  caller: CLPublicKey,
+): DeployUtil.Deploy {
+  const { packageHash } = getCasperConfig().contracts.liquidityVault;
+  if (!packageHash) {
+    throw new Error('LIQUIDITY_VAULT_PACKAGE_HASH is not configured');
+  }
+
+  const args = RuntimeArgs.fromMap({
+    rwa_id: CLValueBuilder.string(rwaId),
+    amount: CLValueBuilder.u512(amountMotes),
+  });
+
+  return buildVersionedPackageDeploy(
+    packageHash,
+    'lock_collateral',
+    args,
+    getCasperConfig().gasCosts.vote,
+    caller,
+  );
+}
+
+/** Owner-only: release locked collateral when RWA is repaid/settled. */
+export function buildReleaseCollateralDeploy(
+  rwaId: string,
+  caller: CLPublicKey,
+): DeployUtil.Deploy {
+  const { packageHash } = getCasperConfig().contracts.liquidityVault;
+  if (!packageHash) {
+    throw new Error('LIQUIDITY_VAULT_PACKAGE_HASH is not configured');
+  }
+
+  const args = RuntimeArgs.fromMap({
+    rwa_id: CLValueBuilder.string(rwaId),
+  });
+
+  return buildVersionedPackageDeploy(
+    packageHash,
+    'release_collateral',
+    args,
+    getCasperConfig().gasCosts.vote,
+    caller,
+  );
+}
+
+/** Owner-only: register an ACTIVE RWA instrument for maturity settlement. */
+export function buildRegisterInstrumentDeploy(
+  rwaId: string,
+  faceValueMotes: string,
+  financingRateBps: number,
+  maturityTimestamp: number,
+  caller: CLPublicKey,
+): DeployUtil.Deploy {
+  const { packageHash } = getCasperConfig().contracts.settlementEngine;
+  if (!packageHash) {
+    throw new Error('SETTLEMENT_ENGINE_PACKAGE_HASH is not configured');
+  }
+
+  const args = RuntimeArgs.fromMap({
+    rwa_id: CLValueBuilder.string(rwaId),
+    face_value: CLValueBuilder.u512(faceValueMotes),
+    financing_rate_bps: CLValueBuilder.u32(financingRateBps),
+    maturity_timestamp: CLValueBuilder.u64(maturityTimestamp),
+  });
+
+  return buildVersionedPackageDeploy(
+    packageHash,
+    'register_instrument',
+    args,
+    getCasperConfig().gasCosts.vote,
+    caller,
+  );
+}
+
+/** Payable — process RWA repayment via Odra proxy caller. */
+export function buildProcessRepaymentDeploy(
+  rwaId: string,
+  repaymentMotes: string,
+  caller: CLPublicKey,
+): DeployUtil.Deploy {
+  const { packageHash } = getCasperConfig().contracts.settlementEngine;
+  if (!packageHash) {
+    throw new Error('SETTLEMENT_ENGINE_PACKAGE_HASH is not configured');
+  }
+
+  const casperConfig = getCasperConfig();
+  const payment = DeployUtil.standardPayment(casperConfig.gasCosts.settlement);
+  const session = buildProxyCallerSession(
+    packageHash,
+    'process_repayment',
+    RuntimeArgs.fromMap({
+      rwa_id: CLValueBuilder.string(rwaId),
+    }),
+    repaymentMotes,
+  );
+
+  const deployParams = new DeployUtil.DeployParams(
+    caller,
+    casperConfig.networkName,
+    1,
+    1_800_000,
+  );
+
+  return DeployUtil.makeDeploy(deployParams, session, payment);
+}
+
+/** Payable — credit net yield back to the liquidity vault. */
+export function buildReceiveYieldDeploy(
+  rwaId: string,
+  yieldMotes: string,
+  caller: CLPublicKey,
+): DeployUtil.Deploy {
+  const { packageHash } = getCasperConfig().contracts.liquidityVault;
+  if (!packageHash) {
+    throw new Error('LIQUIDITY_VAULT_PACKAGE_HASH is not configured');
+  }
+
+  const casperConfig = getCasperConfig();
+  const payment = DeployUtil.standardPayment(casperConfig.gasCosts.settlement);
+  const session = buildProxyCallerSession(
+    packageHash,
+    'receive_yield',
+    RuntimeArgs.fromMap({
+      rwa_id: CLValueBuilder.string(rwaId),
+    }),
+    yieldMotes,
+  );
+
+  const deployParams = new DeployUtil.DeployParams(
+    caller,
+    casperConfig.networkName,
+    1,
+    1_800_000,
+  );
+
+  return DeployUtil.makeDeploy(deployParams, session, payment);
+}
+
 export function buildLiquidateDeploy(
   rwaId: string,
   caller: CLPublicKey,

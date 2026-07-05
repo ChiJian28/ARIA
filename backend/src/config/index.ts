@@ -40,8 +40,11 @@ const configSchema = z.object({
 
   X402_WALLET_PRIVATE_KEY: z.string().optional(),
   X402_WALLET_ADDRESS: z.string().optional(),
+  X402_WALLET_KEY_PATH: z.string().default('./keys/risk-agent.pem'),
+  X402_PAYMENT_RECIPIENT_PK: z.string().optional(),
   X402_WALLET_MIN_BALANCE: z.string().default('10').transform(Number),
   X402_USE_MOCK: z.string().default('true').transform((v) => v === 'true'),
+  X402_LOCAL_GATEWAY: z.string().default('true').transform((v) => v === 'true'),
   X402_CREDIT_BUREAU_URL: z.string().url().optional(),
   X402_FX_RATES_URL: z.string().url().optional(),
   X402_KYC_PROVIDER_URL: z.string().url().optional(),

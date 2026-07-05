@@ -7,6 +7,7 @@ import {
   resolveRiskLevel,
   type RiskLevelLabel,
 } from './instrument-helpers';
+import { resolveNftTokenId } from '../rwa/nft-token';
 
 export interface VaultInstrument {
   id: string;
@@ -16,10 +17,12 @@ export interface VaultInstrument {
   currency: string;
   maturityDate: string;
   nftTokenId: string | null;
+  mintTxHash: string | null;
   assetApy: number;
   riskLevel: RiskLevelLabel;
   claimsStatus: string;
   status: string;
+  collateralLockedMotes: string | null;
 }
 
 export interface VaultRiskDistribution {
@@ -32,7 +35,7 @@ export interface VaultRiskDistribution {
 export async function getVaultInstruments(poolApy = 0.09): Promise<VaultInstrument[]> {
   const rows = await rwaRepo.listVaultInstruments();
 
-  return rows.map((row) => {
+  return Promise.all(rows.map(async (row) => {
     const submission = rowToSubmission(row);
     const riskLevel = resolveRiskLevel(
       row.compliance_raw_data,
@@ -40,6 +43,10 @@ export async function getVaultInstruments(poolApy = 0.09): Promise<VaultInstrume
       row.risk_raw_data,
     );
     const assetApy = resolveAssetApy(row.risk_raw_data, row.valuation_raw_data, poolApy);
+    const nftTokenId = await resolveNftTokenId(submission.id, {
+      nftTokenId: submission.nftTokenId,
+      mintTxHash: submission.mintTxHash,
+    });
 
     return {
       id: submission.id,
@@ -51,13 +58,15 @@ export async function getVaultInstruments(poolApy = 0.09): Promise<VaultInstrume
         submission.dueDate instanceof Date
           ? submission.dueDate.toISOString().slice(0, 10)
           : String(submission.dueDate).slice(0, 10),
-      nftTokenId: submission.nftTokenId ?? null,
+      nftTokenId,
+      mintTxHash: submission.mintTxHash ?? null,
       assetApy,
       riskLevel,
       claimsStatus: mapClaimsStatus(submission.status),
       status: submission.status,
+      collateralLockedMotes: submission.collateralLockedMotes ?? null,
     };
-  });
+  }));
 }
 
 export async function getVaultRiskDistribution(poolApy = 0.09): Promise<VaultRiskDistribution> {

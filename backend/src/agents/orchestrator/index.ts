@@ -3,11 +3,19 @@ import { synthesizeDecision } from './synthesizer';
 import { rwaRepo } from '../../db/repositories/rwa.repo';
 import { agentRepo } from '../../db/repositories/agent.repo';
 import { mintRwaNft } from '../../blockchain/contracts/rwa-registry';
+import { lockCollateral } from '../../blockchain/contracts/liquidity-vault';
 import { finalizeVote } from '../../blockchain/contracts/agent-council';
+import { vaultRepo } from '../../db/repositories/vault.repo';
+import { resolveLockAmountMotes } from '../../services/vault/collateral';
+import {
+  ensureInstrumentRegistered,
+  resolvePrincipalMotes,
+  resolveSuggestedRate,
+} from '../../services/vault/settlement';
 import { sseEmitter } from '../../api/sse/emitter';
 import { getTotalSpend } from '../../services/x402/wallet';
 import logger from '../../utils/logger';
-import { RwaSubmission } from '../../utils/types/rwa.types';
+import { RwaSubmission, RwaStatus } from '../../utils/types/rwa.types';
 
 export interface PipelineResult {
   rwaId: string;
@@ -99,7 +107,7 @@ export async function runRwaPipeline(submission: RwaSubmission): Promise<Pipelin
     }
 
     // Step 5a: Mint RWA NFT (deployer/minter key)
-    const riskData = riskVote?.rawData as { probabilityOfDefault?: number; creditScore?: number } | undefined;
+    const riskData = riskVote?.rawData as { probabilityOfDefault?: number; creditScore?: number; suggestedRate?: number } | undefined;
     const valuationData = valuationVote?.rawData as { collateralRatio?: number } | undefined;
 
     const approvalExtras = {
@@ -132,16 +140,81 @@ export async function runRwaPipeline(submission: RwaSubmission): Promise<Pipelin
       );
 
       mintTxHash = mintResult.deployHash;
+      nftTokenId = mintResult.nftTokenId;
 
-      await rwaRepo.updateStatus(rwaId, 'APPROVED', {
+      let lockTxHash: string | undefined;
+      let collateralLockedMotes: string | undefined;
+      let finalStatus: RwaStatus = 'APPROVED';
+      let decisionMemo = synthesis.memo;
+
+      try {
+        const [tvl, alreadyLocked] = await Promise.all([
+          vaultRepo.getTVL(),
+          rwaRepo.getTotalLockedCollateralMotes(),
+        ]);
+        const lockMotes = resolveLockAmountMotes(
+          BigInt(tvl.totalCspr || '0'),
+          BigInt(alreadyLocked || '0'),
+          valuationData?.collateralRatio ?? approvalExtras.collateralRatio,
+        );
+
+        if (lockMotes > 0n) {
+          const lockResult = await lockCollateral(rwaId, lockMotes.toString());
+          lockTxHash = lockResult.deployHash;
+          collateralLockedMotes = lockMotes.toString();
+          finalStatus = 'ACTIVE';
+
+          sseEmitter.emit('VAULT_EVENT', {
+            type: 'VAULT_EVENT',
+            rwaId,
+            data: {
+              eventType: 'COLLATERAL_LOCKED',
+              amountMotes: collateralLockedMotes,
+              txHash: lockTxHash,
+            },
+            timestamp: new Date().toISOString(),
+          });
+
+          try {
+            const principalMotes = resolvePrincipalMotes({
+              ...submission,
+              collateralLockedMotes,
+            });
+            const annualRate = resolveSuggestedRate(riskVote?.rawData ?? null);
+            await ensureInstrumentRegistered(
+              { ...submission, collateralLockedMotes },
+              principalMotes,
+              annualRate,
+            );
+          } catch (regErr) {
+            logger.warn('register_instrument skipped after lock', {
+              rwa_id: rwaId,
+              error: (regErr as Error).message,
+            });
+          }
+        } else {
+          decisionMemo = `${synthesis.memo}\n\n⚠️ Collateral lock skipped: insufficient vault liquidity`;
+          logger.warn('Skipping collateral lock — zero available liquidity', { rwa_id: rwaId });
+        }
+      } catch (lockErr) {
+        const lockError = (lockErr as Error).message;
+        decisionMemo = `${synthesis.memo}\n\n⚠️ Collateral lock pending: ${lockError}`;
+        logger.error('Failed to lock collateral', { rwa_id: rwaId, error: lockError });
+      }
+
+      await rwaRepo.updateStatus(rwaId, finalStatus, {
         ...approvalExtras,
         mintTxHash,
+        nftTokenId,
+        lockTxHash,
+        collateralLockedMotes,
+        finalDecisionMemo: decisionMemo,
       });
 
       sseEmitter.emit('NFT_MINTED', {
         type: 'NFT_MINTED',
         rwaId,
-        data: { mintTxHash, memo: synthesis.headline },
+        data: { mintTxHash, nftTokenId, memo: synthesis.headline },
         timestamp: new Date().toISOString(),
       });
     } catch (mintErr) {

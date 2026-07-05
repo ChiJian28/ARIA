@@ -2,6 +2,7 @@ import { buildMintRwaDeploy, buildUpdateReputationDeploy } from '../transactions
 import { signDeploy } from '../transactions/signer';
 import { submitAndWait, submitMockDeploy } from '../transactions/submitter';
 import { publicKeyFromHex, publicKeyFromKeyFile } from '../transactions/casper-keys';
+import { parseRwaMintedTokenId } from '../queries/rwa-mint';
 import { getCasperConfig } from '../../config/casper';
 import { config } from '../../config';
 import logger from '../../utils/logger';
@@ -66,7 +67,21 @@ export async function mintRwaNft(
 
     const deploy = buildMintRwaDeploy(rwaId, ownerPublicKeyHex, metadataRecord, callerKey);
     const signedDeploy = signDeploy(deploy, minterKeyPath);
-    return await submitAndWait(signedDeploy);
+    const result = await submitAndWait(signedDeploy);
+
+    if (result.status === 'success') {
+      const nftTokenId = await parseRwaMintedTokenId(result.deployHash);
+      if (nftTokenId) {
+        logger.info('Resolved RWA NFT token id from mint deploy', { rwa_id: rwaId, nftTokenId });
+        return { ...result, nftTokenId };
+      }
+      logger.warn('Mint succeeded but RwaMinted token id not found in deploy effects', {
+        rwa_id: rwaId,
+        deployHash: result.deployHash,
+      });
+    }
+
+    return result;
   } catch (err) {
     logger.error('Failed to mint RWA NFT', { rwa_id: rwaId, error: (err as Error).message });
     throw err;

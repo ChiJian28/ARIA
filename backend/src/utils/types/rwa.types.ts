@@ -31,6 +31,8 @@ export interface RwaSubmission {
   status: RwaStatus;
   nftTokenId?: string;
   mintTxHash?: string;
+  collateralLockedMotes?: string;
+  lockTxHash?: string;
   riskScore?: number;
   valuationNpv?: number;
   collateralRatio?: number;

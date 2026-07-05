@@ -31,6 +31,7 @@ export function getCasperConfig() {
       deposit: '10000000000', // 10 CSPR (proxy caller WASM needs more gas than direct call)
       withdraw: '5000000000', // 5 CSPR (2 CSPR rejected as Invalid Deploy on testnet)
       liquidate: '2000000000',// 2 CSPR
+      settlement: '10000000000', // payable settlement / yield (proxy caller)
     },
   };
 }

@@ -31,7 +31,7 @@ const MOCK_FX_RATES: Record<string, number> = {
   CAD: 0.74,
 };
 
-function generateMockFxData(currency: string): FxRateData {
+export function generateMockFxData(currency: string): FxRateData {
   const spotRate = MOCK_FX_RATES[currency] ?? 1.0;
   const volatility = currency === 'USD' ? 0 : 0.08 + Math.random() * 0.06;
 

@@ -17,7 +17,7 @@ export interface KycData {
   retrievedAt: string;
 }
 
-function generateMockKycData(
+export function generateMockKycData(
   entityName: string,
   country: string,
   registrationNumber: string,
