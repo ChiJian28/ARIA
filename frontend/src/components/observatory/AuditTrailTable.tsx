@@ -5,21 +5,26 @@ import { useObservatoryAuditTrail } from '@/hooks/useObservatory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate, formatUSD } from '@/lib/formatters';
 import type { ObservatoryAuditTrailEntry } from '@/types/api.types';
+import {
+  formatAuditTrailVoteLabel,
+  resolveAuditTrailDecision,
+  type AuditTrailDecision,
+} from '@/lib/council-display';
 import { cn } from '@/lib/cn';
 
 interface AuditTrailTableProps {
   onSelectRwa: (rwaId: string) => void;
 }
 
-function DecisionBadge({ status }: { status: string }) {
-  if (status === 'APPROVED' || status === 'SETTLED' || status === 'ACTIVE') {
+function DecisionBadge({ decision }: { decision: AuditTrailDecision }) {
+  if (decision === 'APPROVED') {
     return (
       <span className="text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded text-[10px] font-medium font-mono inline-block">
         APPROVED
       </span>
     );
   }
-  if (status === 'REJECTED' || status === 'DEFAULTED') {
+  if (decision === 'REJECTED') {
     return (
       <span className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded text-[10px] font-medium font-mono inline-block">
         REJECTED
@@ -40,6 +45,9 @@ function AuditRow({
   entry: ObservatoryAuditTrailEntry;
   onSelect: (id: string) => void;
 }) {
+  const decision = resolveAuditTrailDecision(entry.status, entry.voteSummary);
+  const voteLabel = formatAuditTrailVoteLabel(entry.voteSummary, decision);
+
   return (
     <tr
       className="hover:bg-bg-card-hover/40 transition-colors cursor-pointer group"
@@ -49,10 +57,10 @@ function AuditRow({
         {entry.id.slice(0, 8)}…
       </td>
       <td className="py-3 px-4">
-        <DecisionBadge status={entry.status} />
+        <DecisionBadge decision={decision} />
       </td>
       <td className="py-3 px-4 font-mono text-text-secondary text-[11px]">
-        {entry.voteSummary.label}
+        {voteLabel}
       </td>
       <td className="py-3 px-4 font-mono text-text-primary text-[11px]">
         {formatUSD(entry.faceValue)} {entry.currency}

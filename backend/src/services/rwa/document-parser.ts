@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getGeminiModel } from '../gemini/client';
+import { getGeminiModel, buildJsonGenerationConfig } from '../gemini/client';
 import { parseJsonFromLlm } from '../gemini/json-parser';
 import logger from '../../utils/logger';
 
@@ -103,11 +103,11 @@ export async function parseInvoiceDocument(
   const documentHash = crypto.createHash('sha256').update(buffer).digest('hex');
   const mime = resolveMimeType(filename, mimetype);
 
-  const model = getGeminiModel({
-    responseMimeType: 'application/json',
-    temperature: 0.1,
-    maxOutputTokens: 2048,
-  });
+  const model = getGeminiModel(
+    buildJsonGenerationConfig({
+      temperature: 0.1,
+    }),
+  );
 
   const userInstruction =
     'Extract invoice fields from this document for RWA underwriting submission. Respond with JSON only.';

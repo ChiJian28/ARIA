@@ -36,6 +36,25 @@ export function repairTruncatedJson(raw: string): string {
   return s;
 }
 
+/** Pull scalar fields from truncated JSON when full parse fails (mid-key cutoffs). */
+export function extractPartialJsonFields(text: string): Record<string, unknown> {
+  const cleaned = stripJsonMarkdown(text);
+  const result: Record<string, unknown> = {};
+  const re =
+    /"([a-zA-Z_][\w]*)"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|true|false|null)/g;
+
+  for (const match of cleaned.matchAll(re)) {
+    const key = match[1];
+    if (match[2] !== undefined) result[key] = match[2];
+    else if (match[3] !== undefined) result[key] = Number(match[3]);
+    else if (match[0].endsWith('true')) result[key] = true;
+    else if (match[0].endsWith('false')) result[key] = false;
+    else result[key] = null;
+  }
+
+  return result;
+}
+
 export function parseJsonFromLlm<T>(text: string): T {
   const cleaned = stripJsonMarkdown(text);
 
@@ -55,6 +74,11 @@ export function parseJsonFromLlm<T>(text: string): T {
         // try next candidate
       }
     }
+  }
+
+  const partial = extractPartialJsonFields(text);
+  if (Object.keys(partial).length > 0) {
+    return partial as T;
   }
 
   throw new Error(`Gemini did not return valid JSON. Response: ${text.substring(0, 240)}`);

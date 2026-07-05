@@ -24,22 +24,23 @@ function countVotes(votes: AgentVote[] | undefined) {
   return { councilVotes, approveCount, rejectCount, votedCount };
 }
 
-/**
- * Derive display consensus from agent votes first, then RWA status.
- * Fixes mismatch when pipeline worker wrongly marked REJECTED after council approved but mint failed.
- */
-export function deriveCouncilOutcome(
-  votes: AgentVote[] | undefined,
+function deriveCouncilOutcomeFromCounts(
+  approveCount: number,
+  rejectCount: number,
+  votedCount: number,
   rwaStatus?: RwaStatus,
   opts?: { nftTokenId?: string | null; mintTxHash?: string | null; finalDecisionMemo?: string },
 ): CouncilOutcome {
-  const { approveCount, rejectCount, votedCount } = countVotes(votes);
   const votesApproved = approveCount >= COUNCIL_MIN_APPROVE;
   const votesRejected = rejectCount >= COUNCIL_MIN_REJECT;
   const hasNft = Boolean(opts?.mintTxHash || opts?.nftTokenId);
   const memo = opts?.finalDecisionMemo ?? '';
 
-  const councilApproved = votesApproved || rwaStatus === 'APPROVED' || rwaStatus === 'SETTLED';
+  const councilApproved =
+    votesApproved ||
+    rwaStatus === 'APPROVED' ||
+    rwaStatus === 'SETTLED' ||
+    rwaStatus === 'ACTIVE';
   const councilRejected =
     !councilApproved && (votesRejected || rwaStatus === 'REJECTED' || rwaStatus === 'DEFAULTED');
 
@@ -70,6 +71,47 @@ export function deriveCouncilOutcome(
     consensusReached,
     summaryMessage,
   };
+}
+
+/**
+ * Derive display consensus from agent votes first, then RWA status.
+ * Fixes mismatch when pipeline worker wrongly marked REJECTED after council approved but mint failed.
+ */
+export function deriveCouncilOutcome(
+  votes: AgentVote[] | undefined,
+  rwaStatus?: RwaStatus,
+  opts?: { nftTokenId?: string | null; mintTxHash?: string | null; finalDecisionMemo?: string },
+): CouncilOutcome {
+  const { approveCount, rejectCount, votedCount } = countVotes(votes);
+  return deriveCouncilOutcomeFromCounts(approveCount, rejectCount, votedCount, rwaStatus, opts);
+}
+
+export type AuditTrailDecision = 'APPROVED' | 'REJECTED' | 'UNDER_AUDIT';
+
+/** Align audit-trail Decision column with RWA detail modal (status + vote summary). */
+export function resolveAuditTrailDecision(
+  status: RwaStatus,
+  voteSummary: { approve: number; reject: number; total: number },
+): AuditTrailDecision {
+  const outcome = deriveCouncilOutcomeFromCounts(
+    voteSummary.approve,
+    voteSummary.reject,
+    voteSummary.total,
+    status,
+  );
+  const display = effectiveRwaDisplayStatus(status, outcome);
+  if (display === 'APPROVED' || display === 'SETTLED' || display === 'ACTIVE') return 'APPROVED';
+  if (display === 'REJECTED' || display === 'DEFAULTED') return 'REJECTED';
+  return 'UNDER_AUDIT';
+}
+
+export function formatAuditTrailVoteLabel(
+  voteSummary: { total: number; councilSize: number },
+  decision: AuditTrailDecision,
+): string {
+  const { total, councilSize } = voteSummary;
+  if (total === 0 && decision !== 'UNDER_AUDIT') return '—';
+  return `${total}/${councilSize}`;
 }
 
 /** When DB has no vote rows but RWA already decided, show sensible council UI. */

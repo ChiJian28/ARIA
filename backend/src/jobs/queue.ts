@@ -2,18 +2,34 @@ import { Queue, Worker } from 'bullmq';
 import { config } from '../config';
 import logger from '../utils/logger';
 
-/** BullMQ connection — Upstash needs maxRetriesPerRequest: null */
-function buildRedisConnection() {
-  const isUpstash = config.REDIS_URL.includes('upstash.io');
-  return {
-    url: config.REDIS_URL,
-    ...(isUpstash
-      ? { maxRetriesPerRequest: null, enableReadyCheck: false }
-      : {}),
-  };
-}
+/** Fresh plain-object options per Queue/Worker (never share one object across instances) */
+function createRedisConnection() {
+  const raw = config.REDIS_URL;
+  const isUpstash = raw.includes('upstash.io');
 
-const connectionOptions = buildRedisConnection();
+  try {
+    const parsed = new URL(raw);
+    const useTls = parsed.protocol === 'rediss:';
+
+    return {
+      host: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : 6379,
+      username: decodeURIComponent(parsed.username || 'default'),
+      password: decodeURIComponent(parsed.password),
+      ...(useTls ? { tls: {} } : {}),
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      ...(isUpstash ? {} : {}),
+    };
+  } catch {
+    return {
+      url: raw,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      ...(raw.startsWith('rediss://') ? { tls: {} } : {}),
+    };
+  }
+}
 
 let rwaQueue: Queue | null = null;
 let sentinelQueue: Queue | null = null;
@@ -22,7 +38,7 @@ let settlementQueue: Queue | null = null;
 export function getRwaQueue(): Queue {
   if (!rwaQueue) {
     rwaQueue = new Queue('rwa-pipeline', {
-      connection: connectionOptions,
+      connection: createRedisConnection(),
       defaultJobOptions: {
         attempts: 2,
         backoff: { type: 'exponential', delay: 10000 },
@@ -37,7 +53,7 @@ export function getRwaQueue(): Queue {
 export function getSentinelQueue(): Queue {
   if (!sentinelQueue) {
     sentinelQueue = new Queue('sentinel-scan', {
-      connection: connectionOptions,
+      connection: createRedisConnection(),
       defaultJobOptions: {
         attempts: 1,
         removeOnComplete: 10,
@@ -51,7 +67,7 @@ export function getSentinelQueue(): Queue {
 export function getSettlementQueue(): Queue {
   if (!settlementQueue) {
     settlementQueue = new Queue('settlement-check', {
-      connection: connectionOptions,
+      connection: createRedisConnection(),
       defaultJobOptions: {
         attempts: 3,
         backoff: { type: 'exponential', delay: 30000 },
@@ -69,10 +85,14 @@ export function createWorker<T = any, R = any>(
   processor: (job: import('bullmq').Job<T>) => Promise<R>,
   options?: { concurrency?: number },
 ): Worker<T, R> {
-  return new Worker<T, R>(name, processor, {
-    connection: connectionOptions,
+  const worker = new Worker<T, R>(name, processor, {
+    connection: createRedisConnection(),
     concurrency: options?.concurrency ?? 1,
   });
+  worker.on('error', (err) => {
+    logger.error('BullMQ worker error', { queue: name, error: err.message });
+  });
+  return worker;
 }
 
 export async function closeQueues(): Promise<void> {

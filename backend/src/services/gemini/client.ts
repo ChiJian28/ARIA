@@ -5,6 +5,24 @@ import { parseJsonFromLlm } from './json-parser';
 
 let geminiClient: GoogleGenerativeAI | null = null;
 
+/** SDK types lag behind API — thinkingBudget avoids 2.5-flash eating maxOutputTokens. */
+export type GeminiGenerationConfig = GenerationConfig & {
+  thinkingConfig?: { thinkingBudget?: number };
+};
+
+const JSON_MAX_OUTPUT_TOKENS = 4096;
+
+export function buildJsonGenerationConfig(overrides?: GeminiGenerationConfig): GeminiGenerationConfig {
+  return {
+    responseMimeType: 'application/json',
+    temperature: 0.1,
+    maxOutputTokens: JSON_MAX_OUTPUT_TOKENS,
+    // gemini-2.5-flash spends hidden "thinking" tokens against maxOutputTokens by default
+    thinkingConfig: { thinkingBudget: 0 },
+    ...overrides,
+  };
+}
+
 export function getGeminiClient(): GoogleGenerativeAI {
   if (!geminiClient) {
     geminiClient = new GoogleGenerativeAI(config.GEMINI_API_KEY);
@@ -12,7 +30,7 @@ export function getGeminiClient(): GoogleGenerativeAI {
   return geminiClient;
 }
 
-export function getGeminiModel(generationConfig?: GenerationConfig): GenerativeModel {
+export function getGeminiModel(generationConfig?: GeminiGenerationConfig): GenerativeModel {
   const client = getGeminiClient();
   return client.getGenerativeModel({
     model: config.GEMINI_MODEL,
@@ -20,7 +38,7 @@ export function getGeminiModel(generationConfig?: GenerationConfig): GenerativeM
       temperature: 0.2,
       topK: 40,
       topP: 0.95,
-      maxOutputTokens: 4096,
+      maxOutputTokens: JSON_MAX_OUTPUT_TOKENS,
       ...generationConfig,
     },
   });
@@ -35,7 +53,7 @@ export async function generateContent(
   systemPrompt: string,
   userPrompt: string,
   context?: { agent_id?: string; rwa_id?: string },
-  generationConfig?: GenerationConfig,
+  generationConfig?: GeminiGenerationConfig,
 ): Promise<string> {
   const model = getGeminiModel(generationConfig);
 
@@ -46,18 +64,40 @@ export async function generateContent(
     rwa_id: context?.rwa_id,
     model: config.GEMINI_MODEL,
     promptLength: prompt.length,
+    maxOutputTokens: generationConfig?.maxOutputTokens ?? JSON_MAX_OUTPUT_TOKENS,
   });
 
   try {
     const result = await model.generateContent(prompt);
     const response = result.response;
     const text = response.text();
+    const candidate = response.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const usage = response.usageMetadata as
+      | { candidatesTokenCount?: number; thoughtsTokenCount?: number }
+      | undefined;
 
     logger.debug('Gemini response received', {
       agent_id: context?.agent_id,
       rwa_id: context?.rwa_id,
       responseLength: text.length,
+      finishReason,
+      candidatesTokenCount: usage?.candidatesTokenCount,
+      thoughtsTokenCount: usage?.thoughtsTokenCount,
     });
+
+    if (
+      text.length < 200 &&
+      (finishReason === 'MAX_TOKENS' || (usage?.thoughtsTokenCount ?? 0) > 0)
+    ) {
+      logger.warn('Gemini response suspiciously short', {
+        agent_id: context?.agent_id,
+        rwa_id: context?.rwa_id,
+        finishReason,
+        responseLength: text.length,
+        thoughtsTokenCount: usage?.thoughtsTokenCount,
+      });
+    }
 
     return text;
   } catch (err) {
@@ -83,11 +123,7 @@ export async function generateJson<T = unknown>(
   context?: { agent_id?: string; rwa_id?: string },
   options?: GenerateJsonOptions<T>,
 ): Promise<T> {
-  const jsonConfig: GenerationConfig = {
-    responseMimeType: 'application/json',
-    temperature: 0.1,
-    maxOutputTokens: 2048,
-  };
+  const jsonConfig = buildJsonGenerationConfig();
 
   const jsonSystemPrompt = `${systemPrompt}\n\nIMPORTANT: Respond ONLY with a single valid JSON object. No markdown fences, no commentary.`;
 
