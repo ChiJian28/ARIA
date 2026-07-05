@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-deep: #080812;
+  --color-bg-surface: #0D0D1A;
+  --color-bg-card: #12121F;
+  --color-bg-card-hover: #18182A;
+  --color-bg-elevated: #1E1E35;
+  --color-text-primary: #F0EEFF;
+  --color-text-secondary: #8B80B5;
+  --color-text-muted: #4D4875;
+  --font-family-sans: 'Inter', sans-serif;
+  --font-family-mono: 'Geist Mono', monospace;
+  --animate-landing-ticker: landing-ticker 45s linear infinite;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: rgb(139 92 246 / 0.15);
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #080812;
+    color: #F0EEFF;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0D0D1A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1E1E35;
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a2a4a;
+  }
+}
+
+@keyframes landing-ticker {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
