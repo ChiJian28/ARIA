@@ -1,0 +1,17 @@
+[package]
+name = "liquidity-vault"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "liquidity_vault"
+crate-type = ["cdylib", "rlib"]
+
+[build-dependencies]
+odra-build = "=2.7.2"
+
+[dependencies]
+odra = { workspace = true }
+
+[dev-dependencies]
+odra-test = "=2.7.2"

@@ -1,0 +1,7 @@
+[target.wasm32-unknown-unknown]
+# Casper VM = WASM MVP only. Explicitly disable features LLVM enables by default.
+rustflags = [
+    "-C", "target-cpu=mvp",
+    "-C", "target-feature=-bulk-memory,-sign-ext,-multivalue,-reference-types,-nontrapping-fptoint",
+    "-C", "link-arg=--allow-undefined",
+]

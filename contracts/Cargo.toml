@@ -1,0 +1,15 @@
+[workspace]
+members = [
+    "agent-council",
+    "rwa-registry",
+    "liquidity-vault",
+    "settlement-engine",
+]
+resolver = "2"
+
+[workspace.dependencies]
+odra = { version = "=2.7.2", default-features = false }
+
+[profile.release]
+codegen-units = 1
+lto = true

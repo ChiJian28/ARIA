@@ -1,0 +1,11 @@
+[[contracts]]
+fqn = "agent_council::AgentCouncil"
+
+[[contracts]]
+fqn = "rwa_registry::RwaRegistry"
+
+[[contracts]]
+fqn = "liquidity_vault::LiquidityVault"
+
+[[contracts]]
+fqn = "settlement_engine::SettlementEngine"
