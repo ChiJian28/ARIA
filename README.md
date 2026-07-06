@@ -81,20 +81,7 @@ The `settlement-check` cron scans matured instruments and runs `settleMaturedRwa
 
 ## Demo
 
-<!-- Replace with your public demo video URL before submission -->
-> 🎬 **Demo video:** *[Coming soon — link to YouTube/Loom walkthrough]*
-
-**Suggested walkthrough (≈ 3 min):**
-
-1. Connect Casper Wallet → deposit CSPR into the Liquidity Vault
-2. Submit a sample invoice → watch the Observatory council vote live
-3. Show on-chain mint tx + collateral lock in Pool Proof table
-4. Highlight x402 micropayment flow in backend logs
-5. End on Vault stats: TVL, utilization, expected APY
-
-**Live app (Testnet):** *[Add deployed frontend URL]*  
-**Backend health:** `GET /api/health`
-
+https://www.youtube.com/watch?v=Jv1iwIuFSjE
 
 ## Installation
 
