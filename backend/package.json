@@ -4,7 +4,7 @@
   "description": "ARIA - Autonomous RWA Intelligence Agent backend",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/db/migrations','dist/db/migrations',{recursive:true})\"",
     "start": "node dist/index.js",
     "test": "jest",
     "generate-keys": "ts-node scripts/agents/generate-agent-keys.ts",

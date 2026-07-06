@@ -75,6 +75,22 @@ export async function withTransaction<T>(
   }
 }
 
+function resolveMigrationsDir(): string {
+  const candidates = [
+    path.join(__dirname, 'migrations'),
+    path.join(process.cwd(), 'src/db/migrations'),
+    path.join(process.cwd(), 'dist/db/migrations'),
+  ];
+
+  for (const dir of candidates) {
+    if (fs.existsSync(dir)) {
+      return dir;
+    }
+  }
+
+  throw new Error(`Migrations directory not found. Tried: ${candidates.join(', ')}`);
+}
+
 export async function runMigrations(): Promise<void> {
   logger.info('Running database migrations...');
 
@@ -85,7 +101,7 @@ export async function runMigrations(): Promise<void> {
     )
   `);
 
-  const migrationsDir = path.join(__dirname, 'migrations');
+  const migrationsDir = resolveMigrationsDir();
   const files = fs
     .readdirSync(migrationsDir)
     .filter((f) => f.endsWith('.sql'))
