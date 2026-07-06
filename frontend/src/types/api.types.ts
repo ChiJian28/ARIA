@@ -10,7 +10,16 @@ export interface HealthResponse {
   timestamp: string;
 }
 
-export type RwaStatus = 'PENDING' | 'ANALYZING' | 'VOTING' | 'APPROVED' | 'REJECTED' | 'SETTLED' | 'DEFAULTED';
+export type RwaStatus =
+  | 'PENDING'
+  | 'ANALYZING'
+  | 'VOTING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ACTIVE'
+  | 'MATURED'
+  | 'SETTLED'
+  | 'DEFAULTED';
 export type AssetType = 'INVOICE' | 'PURCHASE_ORDER' | 'TRADE_RECEIVABLE';
 
 export interface AgentVote {

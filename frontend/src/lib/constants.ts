@@ -36,6 +36,8 @@ export const RWA_STATUS_LABELS: Record<string, string> = {
   VOTING: 'Voting',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
+  ACTIVE: 'Active',
+  MATURED: 'Matured',
   SETTLED: 'Settled',
   DEFAULTED: 'Defaulted',
 };
@@ -46,6 +48,8 @@ export const STATUS_COLORS: Record<string, string> = {
   VOTING: 'violet',
   APPROVED: 'emerald',
   REJECTED: 'red',
+  ACTIVE: 'emerald',
+  MATURED: 'amber',
   SETTLED: 'teal',
   DEFAULTED: 'red',
 };

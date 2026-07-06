@@ -2,7 +2,14 @@ import type { AgentVote, RwaStatus } from '@/types/api.types';
 import { COUNCIL_MIN_APPROVE, COUNCIL_MIN_REJECT, COUNCIL_VOTING_AGENT_IDS } from '@/lib/constants';
 
 const ACTIVE_RWA_STATUSES = new Set<RwaStatus>(['PENDING', 'ANALYZING', 'VOTING']);
-const TERMINAL_RWA_STATUSES = new Set<RwaStatus>(['APPROVED', 'REJECTED', 'SETTLED', 'DEFAULTED']);
+const TERMINAL_RWA_STATUSES = new Set<RwaStatus>([
+  'APPROVED',
+  'REJECTED',
+  'ACTIVE',
+  'MATURED',
+  'SETTLED',
+  'DEFAULTED',
+]);
 
 export interface CouncilOutcome {
   /** True when agent votes (or RWA status) indicate council approval */
@@ -120,7 +127,10 @@ export function resolveCouncilVotes(
   rwaStatus?: RwaStatus,
 ): AgentVote[] | undefined {
   if (!votes?.length && rwaStatus && TERMINAL_RWA_STATUSES.has(rwaStatus)) {
-    const decision = rwaStatus === 'APPROVED' || rwaStatus === 'SETTLED' ? 'APPROVE' : 'REJECT';
+    const decision =
+      rwaStatus === 'APPROVED' || rwaStatus === 'SETTLED' || rwaStatus === 'ACTIVE'
+        ? 'APPROVE'
+        : 'REJECT';
     return COUNCIL_VOTING_AGENT_IDS.map((agentId) => ({
       agentId,
       vote: decision,
