@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 640" width="100%" style="max-width:880px;font-family:system-ui,-apple-system,sans-serif">
+  <defs>
+    <linearGradient id="paper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#faf8ff"/>
+      <stop offset="100%" stop-color="#f3f0ff"/>
+    </linearGradient>
+    <filter id="sh">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect width="880" height="640" rx="16" fill="url(#paper)"/>
+  <text x="440" y="36" text-anchor="middle" font-size="18" font-weight="700" fill="#1e1b2e">ARIA — 5-Layer Technical Architecture</text>
+
+  <!-- ═══ LAYER 1: DATA ═══ -->
+  <rect x="40" y="76" width="800" height="88" rx="10" fill="#fff" stroke="#8b5cf6" stroke-width="2" filter="url(#sh)"/>
+  <rect x="40" y="76" width="110" height="88" rx="10" fill="#7c3aed"/>
+  <text x="95" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">① DATA</text>
+  <text x="95" y="126" text-anchor="middle" font-size="9" fill="#ede9fe">Input</text>
+  <text x="170" y="104" font-size="12" font-weight="600" fill="#1e1b2e">RWA Invoice Submission</text>
+  <rect x="170" y="114" width="120" height="28" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="230" y="132" text-anchor="middle" font-size="10" fill="#333">PDF · XML · JSON</text>
+  <rect x="300" y="114" width="150" height="28" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="375" y="132" text-anchor="middle" font-size="10" fill="#333">POST /rwa/parse-document</text>
+  <rect x="460" y="114" width="130" height="28" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="525" y="132" text-anchor="middle" font-size="10" fill="#333">Invoice metadata</text>
+  <rect x="602" y="114" width="210" height="28" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-dasharray="4,2"/>
+  <text x="707" y="132" text-anchor="middle" font-size="10" fill="#7c3aed">Gemini doc extract + SHA-256 hash</text>
+  <line x1="440" y1="164" x2="440" y2="184" stroke="#7c3aed" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ═══ LAYER 2: ACQUIRE ═══ -->
+  <rect x="40" y="184" width="800" height="108" rx="10" fill="#fff" stroke="#14b8a6" stroke-width="2" filter="url(#sh)"/>
+  <rect x="40" y="184" width="110" height="108" rx="10" fill="#0d9488"/>
+  <text x="95" y="220" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">② ACQUIRE</text>
+  <text x="95" y="238" text-anchor="middle" font-size="9" fill="#ccfbf1">Queue · DB</text>
+  <text x="170" y="208" font-size="12" font-weight="600" fill="#1e1b2e">BullMQ Pipeline + Persistence</text>
+  <text x="170" y="224" font-size="9" fill="#666">POST /rwa/submit → Supabase Postgres · Upstash Redis · rwa-pipeline worker</text>
+  <!-- 3 legs -->
+  <rect x="170" y="234" width="200" height="44" rx="6" fill="#f0fdfa" stroke="#14b8a6"/>
+  <text x="270" y="252" text-anchor="middle" font-size="10" font-weight="600" fill="#0d9488">Leg 1 · PostgresSQL</text>
+  <text x="270" y="268" text-anchor="middle" font-size="9" fill="#555">rwa_submissions · agent_votes</text>
+  <rect x="382" y="234" width="200" height="44" rx="6" fill="#f0fdfa" stroke="#14b8a6"/>
+  <text x="482" y="252" text-anchor="middle" font-size="10" font-weight="600" fill="#0d9488">Leg 2 · BullMQ + Redis</text>
+  <text x="482" y="268" text-anchor="middle" font-size="9" fill="#555">queue.add('rwa-pipeline')</text>
+  <rect x="594" y="234" width="200" height="44" rx="6" fill="#f0fdfa" stroke="#14b8a6"/>
+  <text x="694" y="252" text-anchor="middle" font-size="10" font-weight="600" fill="#0d9488">Leg 3 · x402 Data</text>
+  <text x="694" y="268" text-anchor="middle" font-size="9" fill="#555">credit · fx · kyc · market</text>
+  <line x1="440" y1="292" x2="440" y2="312" stroke="#7c3aed" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ═══ LAYER 3: ENGINE ═══ -->
+  <rect x="40" y="312" width="800" height="100" rx="10" fill="#fff" stroke="#1e1b2e" stroke-width="2" filter="url(#sh)"/>
+  <rect x="40" y="312" width="110" height="100" rx="10" fill="#1e1b2e"/>
+  <text x="95" y="348" text-anchor="middle" font-size="12" font-weight="700" fill="#f5f3ff">③ ENGINE</text>
+  <text x="95" y="366" text-anchor="middle" font-size="9" fill="#a78bfa">AI Council</text>
+  <text x="170" y="336" font-size="12" font-weight="600" fill="#1e1b2e">Agent Council Pipeline</text>
+  <text x="170" y="352" font-size="9" fill="#666">dispatchSpecialistAgents · synthesizeDecision · runRwaPipeline()</text>
+  <rect x="170" y="362" width="155" height="36" rx="6" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="247" y="378" text-anchor="middle" font-size="9" fill="#333">Risk · Valuation</text>
+  <text x="247" y="392" text-anchor="middle" font-size="9" fill="#333">Compliance (parallel)</text>
+  <rect x="337" y="362" width="175" height="36" rx="6" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <text x="424" y="378" text-anchor="middle" font-size="9" fill="#333">x402 fetch → Gemini infer</text>
+  <text x="424" y="392" text-anchor="middle" font-size="9" fill="#333">APPROVE · REJECT votes</text>
+  <rect x="524" y="362" width="270" height="36" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="659" y="378" text-anchor="middle" font-size="10" font-weight="600" fill="#7c3aed">Orchestrator · Gemini 2.5 Flash</text>
+  <text x="659" y="392" text-anchor="middle" font-size="9" fill="#666">weighted consensus synthesis</text>
+  <line x1="440" y1="412" x2="440" y2="432" stroke="#7c3aed" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ═══ LAYER 4: GATE ═══ -->
+  <rect x="40" y="432" width="800" height="88" rx="10" fill="#fff" stroke="#14b8a6" stroke-width="2" filter="url(#sh)"/>
+  <rect x="40" y="432" width="110" height="88" rx="10" fill="#0f766e"/>
+  <text x="95" y="464" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">④ GATE</text>
+  <text x="95" y="482" text-anchor="middle" font-size="9" fill="#ccfbf1">On-chain</text>
+  <text x="170" y="458" font-size="12" font-weight="600" fill="#1e1b2e">Casper Smart Contracts · Testnet</text>
+  <rect x="170" y="468" width="195" height="40" rx="6" fill="#f0fdfa" stroke="#14b8a6"/>
+  <text x="267" y="486" text-anchor="middle" font-size="10" fill="#333">Agent Council</text>
+  <text x="267" y="500" text-anchor="middle" font-size="9" fill="#666">castVote · finalizeVote</text>
+  <rect x="377" y="468" width="195" height="40" rx="6" fill="#f0fdfa" stroke="#14b8a6"/>
+  <text x="474" y="486" text-anchor="middle" font-size="10" fill="#333">RWA Registry + Vault</text>
+  <text x="474" y="500" text-anchor="middle" font-size="9" fill="#666">mint NFT · lockCollateral</text>
+  <rect x="584" y="468" width="210" height="40" rx="6" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="689" y="486" text-anchor="middle" font-size="10" font-weight="600" fill="#0f766e">Settlement Engine</text>
+  <text x="689" y="500" text-anchor="middle" font-size="9" fill="#555">registerInstrument → ACTIVE</text>
+  <line x1="440" y1="520" x2="440" y2="540" stroke="#7c3aed" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- ═══ LAYER 5: TRUST ═══ -->
+  <rect x="40" y="540" width="800" height="88" rx="10" fill="#fff" stroke="#8b5cf6" stroke-width="2" filter="url(#sh)"/>
+  <rect x="40" y="540" width="110" height="88" rx="10" fill="#7c3aed"/>
+  <text x="95" y="572" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">⑤ TRUST</text>
+  <text x="95" y="590" text-anchor="middle" font-size="9" fill="#ede9fe">Yield · Rep</text>
+  <text x="170" y="566" font-size="12" font-weight="600" fill="#1e1b2e">Settlement + Sentinel + LP Yield Loop</text>
+  <rect x="170" y="576" width="155" height="40" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="247" y="594" text-anchor="middle" font-size="9" fill="#333">Maturity settle</text>
+  <text x="247" y="608" text-anchor="middle" font-size="9" fill="#666">settleMaturedRwa()</text>
+  <text x="340" y="600" font-size="16" fill="#7c3aed">→</text>
+  <rect x="358" y="576" width="155" height="40" rx="6" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="435" y="594" text-anchor="middle" font-size="9" fill="#333">distributeYieldToLps</text>
+  <text x="435" y="608" text-anchor="middle" font-size="9" fill="#666">vault_positions · SSE</text>
+  <text x="528" y="600" font-size="16" fill="#7c3aed">→</text>
+  <rect x="546" y="576" width="248" height="40" rx="6" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="670" y="594" text-anchor="middle" font-size="10" font-weight="600" fill="#7c3aed">Sentinel + agent reputation</text>
+  <text x="670" y="608" text-anchor="middle" font-size="9" fill="#666">monitor · liquidate · score votes</text>
+
+  <!-- flywheel -->
+  <path d="M 820 584 C 860 584, 860 120, 820 120" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.45"/>
+  <text x="848" y="360" text-anchor="middle" font-size="8" fill="#7c3aed" transform="rotate(90 848 360)">flywheel</text>
+
+  <text x="440" y="632" text-anchor="middle" font-size="8" fill="#94a3b8">Also: sentinel-scan + settlement-check cron · Casper node SSE · Next.js frontend via /api/sse/events</text>
+</svg>
