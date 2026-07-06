@@ -14,18 +14,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "paths": {
-      "@agents/*": ["./src/agents/*"],
-      "@services/*": ["./src/services/*"],
-      "@db/*": ["./src/db/*"],
-      "@blockchain/*": ["./src/blockchain/*"],
-      "@api/*": ["./src/api/*"],
-      "@config/*": ["./src/config/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@jobs/*": ["./src/jobs/*"]
-    },
-    "baseUrl": "."
+    "emitDecoratorMetadata": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test"]
