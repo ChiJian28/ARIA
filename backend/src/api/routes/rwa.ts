@@ -12,9 +12,15 @@ import logger from '../../utils/logger';
 
 export const rwaRouter = Router();
 
+const uploadLimits = {
+  fileSize: 10 * 1024 * 1024,
+  fields: 10,
+  fieldNestingDepth: 1,
+};
+
 const documentUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: uploadLimits as multer.Options['limits'],
   fileFilter: (_req, file, cb) => {
     const name = file.originalname.toLowerCase();
     const ok =

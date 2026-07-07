@@ -1,11 +1,12 @@
 import { Queue, Worker } from 'bullmq';
 import { config } from '../config';
 import logger from '../utils/logger';
+import { urlHostnameBelongsTo } from '../utils/url-host';
 
 /** Fresh plain-object options per Queue/Worker (never share one object across instances) */
 function createRedisConnection() {
   const raw = config.REDIS_URL;
-  const isUpstash = raw.includes('upstash.io');
+  const isUpstash = urlHostnameBelongsTo(raw, 'upstash.io');
 
   try {
     const parsed = new URL(raw);

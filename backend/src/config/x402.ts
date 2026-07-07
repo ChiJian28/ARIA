@@ -1,4 +1,5 @@
 import { config } from './index';
+import { isPlaceholderProviderUrl } from '../utils/url-host';
 
 export interface X402ProviderConfig {
   name: string;
@@ -7,18 +8,13 @@ export interface X402ProviderConfig {
   description: string;
 }
 
-function isPlaceholderUrl(url: string | undefined): boolean {
-  if (!url) return true;
-  return url.includes('example.com') || url.includes('mock.');
-}
-
 function localGatewayUrl(path: string): string {
   const port = config.PORT;
   return `http://localhost:${port}/api/x402-gateway${path}`;
 }
 
 function resolveProviderUrl(envUrl: string | undefined, gatewayPath: string): string {
-  if (config.X402_LOCAL_GATEWAY && isPlaceholderUrl(envUrl)) {
+  if (config.X402_LOCAL_GATEWAY && isPlaceholderProviderUrl(envUrl)) {
     return localGatewayUrl(gatewayPath);
   }
   return envUrl ?? localGatewayUrl(gatewayPath);

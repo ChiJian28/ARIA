@@ -13,11 +13,13 @@ export function createServer(): express.Application {
   // Security headers
   app.use(helmet());
 
-  // CORS
-  const allowedOrigins = config.CORS_ORIGINS.split(',').map((o) => o.trim());
+  // CORS — normalize trailing slashes (browser Origin never includes one)
+  const normalizeOrigin = (o: string) => o.trim().replace(/\/$/, '');
+  const allowedOrigins = config.CORS_ORIGINS.split(',').map(normalizeOrigin);
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      const normalized = origin ? normalizeOrigin(origin) : '';
+      if (!origin || allowedOrigins.includes(normalized) || allowedOrigins.includes('*')) {
         callback(null, true);
       } else {
         callback(new Error(`CORS: origin ${origin} not allowed`));

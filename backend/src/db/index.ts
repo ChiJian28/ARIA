@@ -3,14 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
 import logger from '../utils/logger';
+import { urlHostnameBelongsTo, urlHasQueryParam } from '../utils/url-host';
 
 let pool: Pool | null = null;
 
 function buildPoolConfig() {
   const connectionString = config.DATABASE_URL;
   const needsSsl =
-    connectionString.includes('supabase.com') ||
-    connectionString.includes('sslmode=require');
+    urlHostnameBelongsTo(connectionString, 'supabase.com') ||
+    urlHasQueryParam(connectionString, 'sslmode', 'require');
 
   return {
     connectionString,
