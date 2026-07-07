@@ -7,4 +7,3 @@ keys/
 .deployed.json
 *.log
 log.txt
-.env.example
