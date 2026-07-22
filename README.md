@@ -83,7 +83,9 @@ ARIA is built to showcase Casper as the trust layer for agentic RWA underwriting
 
 ## Demo
 
-https://www.youtube.com/watch?v=Jv1iwIuFSjE
+**Final Round:** https://youtu.be/d-zcdZAOqR0
+
+**Qualification Round:** https://www.youtube.com/watch?v=Jv1iwIuFSjE
 
 **Live app:** [https://aria-rwa.vercel.app](https://aria-rwa.vercel.app) · Explorer: [testnet.cspr.live](https://testnet.cspr.live)
 
