@@ -125,20 +125,15 @@ All contracts are Odra WASM deployed on **Casper Testnet** (2026-06-28). Deploy 
 
 Explorer link format: `https://testnet.cspr.live/deploy/{hash}`
 
-**Agent Registration (`AgentCouncil.register_agent`)**
+**Final Round — Recent council votes (2026-07-22)** · Global Logistics $72k (`9d04e46a…` · 3/3 APPROVE on-chain)
 
-| Agent | Deploy Hash |
-|-------|-------------|
-| Risk | [`3ebc39f9…`](https://testnet.cspr.live/deploy/3ebc39f98ac6e1326fc246b95958bda0bf70bbdb20de29711a6cca23293bd31a) |
-| Valuation | [`1641dc99…`](https://testnet.cspr.live/deploy/1641dc99b4c7892b4bd7a130a2aa3d5202a0a01b3256963a99f0a97adae0c3b7) |
-| Compliance | [`277b81e6…`](https://testnet.cspr.live/deploy/277b81e6de8f293000f82252582a29d779bc294db0d546cf13e29d9926c782db) |
-| Sentinel | [`e95498ff…`](https://testnet.cspr.live/deploy/e95498ff48d6a2c57fe75e064d759a684767455218d536e42249a47bd7cf8fdc) |
+Same day as Final demo. Live vault TVL after LP activity: **600 CSPR**.
 
-**x402 Micropayment**
-
-| Event | Deploy Hash |
-|-------|-------------|
-| On-chain payment transfer | [`32cd42a4…`](https://testnet.cspr.live/deploy/32cd42a48eb8ec78d931d1de9c8499e3c89811b683341cc25ee026f96651e581) |
+| Step | Deploy Hash |
+|------|-------------|
+| Risk APPROVE | [`808cf685…`](https://testnet.cspr.live/deploy/808cf6857f30c85bb9a390bd82798361dc5e5bbcb09bae96f3cf900e7ff22054) |
+| Valuation APPROVE | [`4368d7bc…`](https://testnet.cspr.live/deploy/4368d7bc43b1e37da48600a04759eb281890922d73eb32c19ffdf52576c9b273) |
+| Compliance APPROVE | [`b34f2772…`](https://testnet.cspr.live/deploy/b34f277229ff66728f9ac48537695b93e2434bd7a107c62d0dca0ff1b73e0890) |
 
 **Full Pipeline — Acme Corp $48k Invoice** (`d4016990…` · ACTIVE · NFT #6)
 
@@ -174,6 +169,21 @@ Explorer link format: `https://testnet.cspr.live/deploy/{hash}`
 |-------|-------------|
 | Vault deposit | [`acbd2e85…`](https://testnet.cspr.live/deploy/acbd2e854e717bab6c2cd2bcf4383b0dd55d34ecd6ab631d1eaa34a01ebbce22) |
 | Vault deposit (confirmed) | [`f9fc3d29…`](https://testnet.cspr.live/deploy/f9fc3d296a00e1e97b9ac846f5f8cff921d21fd43d538fcfc29b4e5da36f39b7) |
+
+**x402 Micropayment**
+
+| Event | Deploy Hash |
+|-------|-------------|
+| On-chain payment transfer | [`32cd42a4…`](https://testnet.cspr.live/deploy/32cd42a48eb8ec78d931d1de9c8499e3c89811b683341cc25ee026f96651e581) |
+
+**Agent Registration (`AgentCouncil.register_agent`)**
+
+| Agent | Deploy Hash |
+|-------|-------------|
+| Risk | [`3ebc39f9…`](https://testnet.cspr.live/deploy/3ebc39f98ac6e1326fc246b95958bda0bf70bbdb20de29711a6cca23293bd31a) |
+| Valuation | [`1641dc99…`](https://testnet.cspr.live/deploy/1641dc99b4c7892b4bd7a130a2aa3d5202a0a01b3256963a99f0a97adae0c3b7) |
+| Compliance | [`277b81e6…`](https://testnet.cspr.live/deploy/277b81e6de8f293000f82252582a29d779bc294db0d546cf13e29d9926c782db) |
+| Sentinel | [`e95498ff…`](https://testnet.cspr.live/deploy/e95498ff48d6a2c57fe75e064d759a684767455218d536e42249a47bd7cf8fdc) |
 
 
 ## Installation
