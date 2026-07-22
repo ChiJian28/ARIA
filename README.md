@@ -61,15 +61,17 @@ The `settlement-check` cron scans matured instruments and runs `settleMaturedRwa
 | **Blockchain** | Casper Testnet · casper-js-sdk | Deploys, queries, wallet signing |
 | **Smart Contracts** | Odra (Rust/WASM) | RWA Registry · Agent Council · Liquidity Vault · Settlement Engine |
 
-### Casper AI Toolkit Usage
+### Casper Ecosystem Impact
+
+ARIA is built to showcase Casper as the trust layer for agentic RWA underwriting — every specialist agent pays for data, signs with its own key, and leaves an auditable trail on Testnet.
 
 | Toolkit Component | How ARIA Uses It |
 |-------------------|------------------|
-| **x402 Micropayments** | Risk, Valuation, and Compliance agents pay per API request before fetching credit, FX, KYC, and market data. Supports signed deploy proofs (< 2.5 CSPR) and on-chain transfers for larger amounts. |
-| **MCP Servers** | MCP client layer for blockchain queries and trade operations — contract state reads, vote counts, deploy submission. Initialized at backend startup alongside agent workers. |
-| **CSPR.click / Agent Keys** | Each agent (Risk, Valuation, Compliance, Orchestrator, Sentinel) holds its own ED25519 key pair. Agents sign and broadcast on-chain council votes autonomously. |
-| **CSPR.cloud APIs** | Deploy status polling, node RPC streaming, and event watching for transaction finality during mint, lock, and settlement flows. |
-| **Odra Framework** | Four production contracts compiled to WASM and deployed on Casper Testnet: NFT registry, voting council, LP vault, and maturity settlement. |
+| **Odra Framework** | Four WASM contracts on Casper Testnet: `RwaRegistry` (CEP-78 NFT), `AgentCouncil` (quorum votes), `LiquidityVault` (LP deposits + collateral lock), `SettlementEngine` (maturity / repayment). |
+| **x402 Micropayments** | Risk, Valuation, and Compliance agents settle HTTP-native micropayments before credit / FX / KYC / market calls. Small amounts use signed deploy proofs; larger amounts use on-chain CSPR transfers (see sample tx `32cd42a4…`). |
+| **Agent Keys (ED25519)** | Each agent (Risk, Valuation, Compliance, Orchestrator, Sentinel) holds its own key pair. Council votes are signed and broadcast autonomously — humans submit invoices and deposit liquidity; agents underwrite. |
+| **CSPR.cloud APIs** | Deploy status polling, node RPC, and event watching for mint / lock / settlement finality. |
+| **MCP Servers** | Scaffold client for Casper MCP / CSPR.trade is initialized at startup; the live pipeline today uses `casper-js-sdk` + CSPR.cloud. Production MCP wiring is on the roadmap. |
 
 
 ## Architecture
@@ -82,6 +84,97 @@ The `settlement-check` cron scans matured instruments and runs `settleMaturedRwa
 ## Demo
 
 https://www.youtube.com/watch?v=Jv1iwIuFSjE
+
+**Live app:** [https://aria-rwa.vercel.app](https://aria-rwa.vercel.app) · Explorer: [testnet.cspr.live](https://testnet.cspr.live)
+
+
+## Contract Package Hashes & Transactions
+
+All contracts are Odra WASM deployed on **Casper Testnet** (2026-06-28). Deploy hashes below are verified sample transactions from the live pipeline.
+
+### Contract Package Hashes
+
+| Contract | Package Hash |
+|----------|--------------|
+| RWA Registry | `hash-9a714722643a34ae7885e7fc28ea6ceef2b6179b4c768c2ebe2e69a9f389c61d` |
+| Agent Council | `hash-c143ab5eaaa394df26ac09fe5b666a1acb9ee35138da0828e7c7b31347701378` |
+| Liquidity Vault | `hash-2f0db1a537ecbeae56f1fdbd083fcb5cf399ef7d71c8d1524bccaa43002ded1a` |
+| Settlement Engine | `hash-a3eeedaae342d47d59e20bf788ac03200b42db6adac675324116c105a032e2f2` |
+
+### Contract Instance Hashes (Active on Testnet)
+
+| Contract | Instance Hash |
+|----------|---------------|
+| RWA Registry | `contract-63efcdfdc1bae5592a4068405801c544af8009ab181f37a6204a5e1bd19c5c69` |
+| Agent Council | `contract-e7ba3ae8aa5fac2188dd80ec479eae6a566829702fa6535685042b072cce60d4` |
+| Liquidity Vault | `contract-30436012b4709630caf91c3e3889d9ef94f2036a98dc13a92f8a8562093bd935` |
+| Settlement Engine | `contract-b5c87e29e58df717d93719ab5d0abf86793a2bd2c7feaca2f9b762e930714eff` |
+
+### Agent On-Chain Public Keys (ED25519)
+
+| Role | Public Key |
+|------|------------|
+| Deployer / Minter | `016126bc3a5d205b3c84871ccbeebb4fcd69b1745da5b00d29216d0565bb322029` |
+| Risk Agent | `01e9d6f0a38e00a665b8c864f2d74c932a0699e7def73f3930ca458e80589ca26a` |
+| Valuation Agent | `01af0a2294669ffe09b4eec0aa8fa30435028370330f9b934504e8fe4462afd69f` |
+| Compliance Agent | `011dbbc6383705af7e1055fea16b46178de77c650ce5f16a272e3b21a9a377884f` |
+| Sentinel Agent | `0103dbf72b1e0f2e74d50cf76d3c47888a7a1ed81af125afdcc3ded67313c028e4` |
+| Orchestrator Agent | `018f9280b1ccbbd58d939bf664f12e6acd65698e3981f5b6a6a1a24a5668dceabd` |
+
+### Sample Testnet Transactions
+
+Explorer link format: `https://testnet.cspr.live/deploy/{hash}`
+
+**Agent Registration (`AgentCouncil.register_agent`)**
+
+| Agent | Deploy Hash |
+|-------|-------------|
+| Risk | [`3ebc39f9…`](https://testnet.cspr.live/deploy/3ebc39f98ac6e1326fc246b95958bda0bf70bbdb20de29711a6cca23293bd31a) |
+| Valuation | [`1641dc99…`](https://testnet.cspr.live/deploy/1641dc99b4c7892b4bd7a130a2aa3d5202a0a01b3256963a99f0a97adae0c3b7) |
+| Compliance | [`277b81e6…`](https://testnet.cspr.live/deploy/277b81e6de8f293000f82252582a29d779bc294db0d546cf13e29d9926c782db) |
+| Sentinel | [`e95498ff…`](https://testnet.cspr.live/deploy/e95498ff48d6a2c57fe75e064d759a684767455218d536e42249a47bd7cf8fdc) |
+
+**x402 Micropayment**
+
+| Event | Deploy Hash |
+|-------|-------------|
+| On-chain payment transfer | [`32cd42a4…`](https://testnet.cspr.live/deploy/32cd42a48eb8ec78d931d1de9c8499e3c89811b683341cc25ee026f96651e581) |
+
+**Full Pipeline — Acme Corp $48k Invoice** (`d4016990…` · ACTIVE · NFT #6)
+
+| Step | Deploy Hash |
+|------|-------------|
+| Risk APPROVE | [`2e26347c…`](https://testnet.cspr.live/deploy/2e26347cce7234b0ae2c63c418f85207f7b642108d3316aa807871b05eed55e0) |
+| Valuation APPROVE | [`fbdb23aa…`](https://testnet.cspr.live/deploy/fbdb23aa5f2ad23032e2ad828604ec9e49cb7a3e802d0b169ff355a5b1b37395) |
+| Compliance APPROVE | [`a2211610…`](https://testnet.cspr.live/deploy/a2211610a892c74be044a1fb69887044c807520caa2a8fdeffb9bca331f811c3) |
+| Council finalization (3/3) | [`5d9a9077…`](https://testnet.cspr.live/deploy/5d9a9077f6b0131198c75c8341874c936336919f496e2c698d251a2674a19e93) |
+| CEP-78 NFT mint (#6) | [`df579d65…`](https://testnet.cspr.live/deploy/df579d65f02b7f1039db1ef0ff9eb066475566dd5ae4d71a2e943f7b34064f23) |
+| Collateral lock (17 CSPR) | [`6a71fa0d…`](https://testnet.cspr.live/deploy/6a71fa0de29f23c43abe4970f6c02a7b9d050996b860dbbdff9467e62a520f4d) |
+| Settlement instrument register | [`ecf62693…`](https://testnet.cspr.live/deploy/ecf626938ea011f59ef097be1c4c4cc2baa94a5753fea3f861f00c8f6bae5ec3) |
+
+**RWA Mint — Nova Biotech $15k SGD** (`85eae98c…` · NFT #5)
+
+| Step | Deploy Hash |
+|------|-------------|
+| Risk APPROVE | [`0b9826b7…`](https://testnet.cspr.live/deploy/0b9826b72e0441bff56d01adbe2d49d6029cc3824d6e6934c6b7bbc8a33bbdce) |
+| Valuation APPROVE | [`09158a33…`](https://testnet.cspr.live/deploy/09158a335009773a1620f058c2535578cec7a0e253067fc3d87b65e7654e9c4d) |
+| Compliance APPROVE | [`2d808317…`](https://testnet.cspr.live/deploy/2d808317e9d637d73cde957d1287c619a3130585e636ff687d09362fef4677b8) |
+| Council finalization | [`a0dd1f19…`](https://testnet.cspr.live/deploy/a0dd1f198195bbf22889224e662a57bd5bfaea6f64b01fca51526fad21e5fbee) |
+| CEP-78 NFT mint (#5) | [`f93ad54c…`](https://testnet.cspr.live/deploy/f93ad54cc12f12bf4dfd145e926a6c1c43611d689eeef101b6e4868ceb5d2680) |
+
+**RWA Mint — Acme Corp Jul 2026** (`687052bc…` · NFT #7)
+
+| Step | Deploy Hash |
+|------|-------------|
+| CEP-78 NFT mint (#7) | [`11ee986f…`](https://testnet.cspr.live/deploy/11ee986f7b17289a1bd95a2fdb5a6c625400239c9082ef31cb9b90997a48b3af) |
+
+**Liquidity Provider — Vault Deposit**
+
+| Event | Deploy Hash |
+|-------|-------------|
+| Vault deposit | [`acbd2e85…`](https://testnet.cspr.live/deploy/acbd2e854e717bab6c2cd2bcf4383b0dd55d34ecd6ab631d1eaa34a01ebbce22) |
+| Vault deposit (confirmed) | [`f9fc3d29…`](https://testnet.cspr.live/deploy/f9fc3d296a00e1e97b9ac846f5f8cff921d21fd43d538fcfc29b4e5da36f39b7) |
+
 
 ## Installation
 
@@ -151,11 +244,19 @@ npm run dev    # http://localhost:3000
 ```
 
 
+## Long-Term Launch Plans
+
+1. **Mainnet** — Keep Testnet as the public demo; after Finals, harden gas/security reviews and deploy the same Odra packages to Casper Mainnet with upgraded deployer / agent key custody.
+2. **Real data APIs** — Replace the local x402 gateway mocks with production Credit Bureau, FX, KYC, and Market Data providers while keeping the same pay-per-call flow.
+3. **Settlement & reputation loop** — Run more matured invoices end-to-end so LP yield and on-chain agent reputation scores update from real outcomes (not only forward APY).
+4. **Product surface** — Mobile-responsive Observatory / Vault, then purchase orders and trade receivables beyond invoices.
+5. **Contact** — Open-source on [GitHub](https://github.com/ChiJian28/ARIA); Buildathon updates via DoraHacks BUIDL + Casper Telegram/Discord. Prefer GitHub Issues for technical feedback.
+
 ## Future Roadmap
 
 | Item | Notes |
 |------|-------|
 | **Real third-party APIs** | Replace local gateway mocks with live Credit Bureau, FX, KYC, and Market Data providers |
 | **Mobile-responsive UI** | Current dashboard is desktop-first; optimize Observatory theater and Vault for mobile |
-| **More asset types** | Extend beyond invoices to purchase orders and trade receivables|
-| **Live MCP integration** | Extend the current `casper-js-sdk` + CSPR.cloud integration by adopting the production Casper MCP Server and CSPR.trade MCP for agent-native blockchain interactions. |
+| **More asset types** | Extend beyond invoices to purchase orders and trade receivables |
+| **Live MCP integration** | Adopt production Casper MCP Server and CSPR.trade MCP for agent-native chain access |
